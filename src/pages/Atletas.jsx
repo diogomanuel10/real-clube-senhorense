@@ -44,6 +44,7 @@ export default function Atletas({ user }) {
         id: doc.id,
         ...doc.data()
       }));
+      console.log('Atletas carregados:', data); // Debug
       setAtletas(data);
     } catch (error) {
       console.error('Erro ao carregar atletas:', error);
@@ -54,8 +55,8 @@ export default function Atletas({ user }) {
 
 
   const filteredAtletas = atletas.filter(atleta =>
-    atleta.nome.toLowerCase().includes(search.toLowerCase()) ||
-    atleta.equipa.toLowerCase().includes(search.toLowerCase())
+    atleta.nome?.toLowerCase().includes(search.toLowerCase()) ||
+    atleta.equipa?.toLowerCase().includes(search.toLowerCase())
   );
 
 
@@ -119,7 +120,7 @@ export default function Atletas({ user }) {
   };
 
 
-  const positions = ['Central', 'Ponta', 'Levantador(a)', 'Líbero', 'Oposto'];
+  const positions = ['Central', 'Ponta', 'Levantadora', 'Líbero', 'Oposta'];
   const equipas = ['Sub-14 Feminino', 'Sub-16 Feminino', 'Sub-18 Feminino', 'Sub-14 Masculino', 'Sub-16 Masculino', 'Sub-18 Masculino', 'Seniores Feminino', 'Seniores Masculino'];
   const escaloes = ['Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Seniores'];
 
@@ -204,11 +205,11 @@ export default function Atletas({ user }) {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">
-                        {atleta.nome.charAt(0)}
+                        {atleta.nome?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg text-gray-900">{atleta.nome}</h3>
-                        <p className="text-sm text-gray-600">{atleta.equipa}</p>
+                        <h3 className="font-bold text-lg text-gray-900">{atleta.nome || 'Sem nome'}</h3>
+                        <p className="text-sm text-gray-600">{atleta.equipa || 'Sem equipa'}</p>
                       </div>
                     </div>
                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -232,24 +233,42 @@ export default function Atletas({ user }) {
                   <div className="space-y-2 mb-6">
                     <div className="flex items-center text-sm">
                       <span className="w-24 text-gray-500">Idade:</span>
-                      <span className="font-medium">{atleta.idade} anos</span>
+                      <span className="font-medium">{atleta.idade || 'N/A'} anos</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <span className="w-24 text-gray-500">Posição:</span>
-                      <span className="font-medium">{atleta.posicao}</span>
+                      <span className="font-medium">{atleta.posicao || 'N/A'}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <span className="w-24 text-gray-500">Escalão:</span>
-                      <span className="font-medium">{atleta.escalao}</span>
+                      <span className="font-medium">{atleta.escalao || 'N/A'}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <span className="w-24 text-gray-500">Telefone:</span>
-                      <span className="font-mono">{atleta.telefone}</span>
+                      <span className="font-mono text-xs">{atleta.telefone || 'N/A'}</span>
                     </div>
                     {atleta.email && (
                       <div className="flex items-center text-sm">
                         <span className="w-24 text-gray-500">Email:</span>
-                        <span className="text-blue-600 truncate">{atleta.email}</span>
+                        <span className="text-blue-600 truncate text-xs">{atleta.email}</span>
+                      </div>
+                    )}
+                    {atleta.documentos?.cc && (
+                      <div className="flex items-center text-sm">
+                        <span className="w-24 text-gray-500">CC:</span>
+                        <span className="font-mono text-xs">{atleta.documentos.cc}</span>
+                      </div>
+                    )}
+                    {atleta.documentos?.exameMedico && (
+                      <div className="flex items-center text-sm">
+                        <span className="w-24 text-gray-500">Exame:</span>
+                        <span className="text-xs">{atleta.documentos.exameMedico}</span>
+                      </div>
+                    )}
+                    {atleta.observacoes && (
+                      <div className="flex items-start text-sm mt-3 pt-3 border-t border-gray-100">
+                        <span className="w-24 text-gray-500 flex-shrink-0">Obs:</span>
+                        <span className="text-xs text-gray-600 line-clamp-2">{atleta.observacoes}</span>
                       </div>
                     )}
                   </div>
@@ -257,11 +276,16 @@ export default function Atletas({ user }) {
 
                   <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                     <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                      {atleta.equipa}
+                      {atleta.equipa || 'Sem equipa'}
                     </span>
                     <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                      {atleta.posicao}
+                      {atleta.posicao || 'Sem posição'}
                     </span>
+                    {atleta.escalao && (
+                      <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                        {atleta.escalao}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
