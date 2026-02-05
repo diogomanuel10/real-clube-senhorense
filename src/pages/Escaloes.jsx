@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Users, Plus } from "lucide-react";
 
 export default function Escaloes() {
   const [escaloes, setEscaloes] = useState([]);
+  const [treinadores, setTreinadores] = useState([]);
   const [openEscalao, setOpenEscalao] = useState(null);
   const [atletasPorEscalao, setAtletasPorEscalao] = useState({});
   const [loadingEscalao, setLoadingEscalao] = useState({});
@@ -36,7 +37,18 @@ const CORES_ESCALAO = [
 
   useEffect(() => {
     carregarEscaloes();
+    carregarTreinadores();
   }, []);
+
+const carregarTreinadores = async () => {
+  try {
+    const snap = await getDocs(collection(db, "treinadores"));
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setTreinadores(lista);
+  } catch (err) {
+    console.error("Erro ao carregar treinadores:", err);
+  }
+};
 
   const carregarEscaloes = async () => {
     try {
@@ -125,9 +137,11 @@ const CORES_ESCALAO = [
         ) : (
           <div className="space-y-4">
             {escaloes.map((esc) => {
+                
               const aberto = openEscalao === esc.id;
               const atletas = atletasPorEscalao[esc.id] || [];
               const loading = loadingEscalao[esc.id];
+              const treinador = treinadores.find(t => t.escalaoId === esc.id);
 
               return (
                 <div
@@ -171,10 +185,36 @@ const CORES_ESCALAO = [
                     </div>
                   </button>
 
-                  {/* Conteúdo colapsável */}
+                 {/* Conteúdo colapsável */}
                   {aberto && (
                     <div className="border-t border-white/60 bg-white/70 px-5 py-4 space-y-4">
-                      {/* Observações do escalão (local, ainda não grava) */}
+                      {/* ✅ MOSTRAR TREINADOR */}
+                      <div className="pb-3 border-b border-slate-200">
+                        <label className="block text-xs font-semibold text-slate-600 mb-2">
+                          Treinador
+                        </label>
+                        {treinador ? (
+                          <div className="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border border-slate-200">
+                            <div className="w-8 h-8 rounded-full bg-[#0b1635] flex items-center justify-center text-white text-sm font-semibold">
+                              {treinador.nome?.charAt(0) || "?"}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {treinador.nome}
+                              </p>
+                              {treinador.telefone && (
+                                <p className="text-xs text-slate-500">
+                                  📱 {treinador.telefone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-400 px-3 py-2 bg-white rounded-xl border border-slate-200">
+                            Sem treinador atribuído
+                          </p>
+                        )}
+                      </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1">
                           Observações do escalão

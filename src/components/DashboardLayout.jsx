@@ -1,5 +1,5 @@
 // DashboardLayout.jsx
-import { Users, Users2, Calendar, BarChart3 } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { id: "atletas", label: "Atletas", icon: Users, path: "/atletas" },
   { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes" },
   { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos" },
+  { id: "treinadores", label: "Treinadores", icon: User, path: "/treinadores" },
 ];
 
 export default function DashboardLayout({ children }) {

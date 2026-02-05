@@ -7,7 +7,7 @@ import Atletas from './pages/Atletas';
 import Login from './pages/Login';
 import Treinos from './pages/Treinos';
 import Escaloes from './pages/Escaloes';
-
+import Treinadores from "./pages/Treinadores";
 import './styles/globals.css';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -25,6 +25,22 @@ function AppContent({ user }) {
               </DashboardLayout>
             }
           />
+          <Route
+  path="/treinadores"
+  element={
+    <DashboardLayout>
+      <Treinadores />
+    </DashboardLayout>
+  }
+/>
+<Route
+            path="/escaloes"
+            element={
+              <DashboardLayout>
+                <Escaloes user={user} />
+              </DashboardLayout>
+            }
+          />
        <Route
   path="/treinos"
   element={
@@ -33,14 +49,6 @@ function AppContent({ user }) {
     </DashboardLayout>
   }
 />
-          <Route
-            path="/escaloes"
-            element={
-              <DashboardLayout>
-                <Escaloes user={user} />
-              </DashboardLayout>
-            }
-          />
         </>
       ) : (
         <Route path="/" element={<Login />} />
