@@ -61,7 +61,6 @@ export default function Login() {
       {/* ✅ ALTERAÇÃO 1: max-h-[90vh] overflow-y-auto */}
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6 max-h-[90vh] overflow-y-auto">
         <div className="text-center">
-            
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Real Clube Senhorense</h1>
           <p className="text-gray-600">{isLogin ? 'Iniciar sessão' : 'Registo'}</p>
         </div>
