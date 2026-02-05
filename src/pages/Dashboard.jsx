@@ -1,13 +1,25 @@
+// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Users, Users2, Calendar, BarChart3 } from "lucide-react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "../utils/firebase";
+import DashboardLayout from "../components/DashboardLayout"; // ajusta o caminho se necessário
+import { useNavigate } from "react-router-dom";
+
 
 export default function Dashboard({ user }) {
-  const navigate = useNavigate(); // ✅ Hook adicionado aqui!
   const [totalAtletas, setTotalAtletas] = useState(0);
   const [totalEscaloes, setTotalEscaloes] = useState(0);
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     totalAthletes: 0,
     activeTeams: 0,
@@ -19,7 +31,53 @@ export default function Dashboard({ user }) {
   const [treinoSelecionado, setTreinoSelecionado] = useState(null);
   const [atletasDoTreino, setAtletasDoTreino] = useState([]);
   const [presencas, setPresencas] = useState([]);
+  const [showModalPresencas, setShowModalPresencas] = useState(false);
 
+  const marcarPresenca = async (atletaId, treinoId, novoEstado) => {
+    try {
+      // Verificar se já existe registo
+      const q = query(
+        collection(db, "presencas"),
+        where("atletaId", "==", atletaId),
+        where("treinoId", "==", treinoId),
+      );
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        // Criar novo registo
+        await addDoc(collection(db, "presencas"), {
+          atletaId,
+          treinoId,
+          estado: novoEstado,
+          data: new Date().toISOString(),
+        });
+      } else {
+        // Atualizar existente
+        const docId = snap.docs[0].id;
+        await updateDoc(doc(db, "presencas", docId), {
+          estado: novoEstado,
+        });
+      }
+
+      // Recarregar presenças para atualizar UI
+      const qPres = query(
+        collection(db, "presencas"),
+        where("treinoId", "==", treinoId),
+      );
+      const presSnap = await getDocs(qPres);
+      const novasPresencas = presSnap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      setPresencas(novasPresencas);
+
+      console.log(`✅ Presença marcada: ${novoEstado}`);
+    } catch (err) {
+      console.error("Erro ao marcar presença:", err);
+    }
+  };
+
+  // --- TREINOS HOJE + PRESENÇAS + ATLETAS ---
   useEffect(() => {
     const carregarTreinosHoje = async () => {
       try {
@@ -27,8 +85,9 @@ export default function Dashboard({ user }) {
         const y = hoje.getFullYear();
         const m = String(hoje.getMonth() + 1).padStart(2, "0");
         const d = String(hoje.getDate()).padStart(2, "0");
-        const dataStr = `${y}-${m}-${d}`; // igual ao campo data nos treinos
+        const dataStr = `${y}-${m}-${d}`;
 
+        // 1. Treinos de hoje
         const qTreinos = query(
           collection(db, "treinos"),
           where("data", "==", dataStr),
@@ -41,6 +100,29 @@ export default function Dashboard({ user }) {
 
         setTreinosHoje(lista);
         setStats((prev) => ({ ...prev, todayTrainings: lista.length }));
+
+        // 2. Carregar TODOS os atletas (para saber quantos há por equipa)
+        const atletasSnap = await getDocs(collection(db, "atletas"));
+        const todosAtletas = atletasSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        setAtletasDoTreino(todosAtletas);
+
+        // 3. Carregar TODAS as presenças dos treinos de hoje
+        if (lista.length > 0) {
+          const treinoIds = lista.map((t) => t.id);
+          const qPres = query(
+            collection(db, "presencas"),
+            where("treinoId", "in", treinoIds),
+          );
+          const presSnap = await getDocs(qPres);
+          const todasPres = presSnap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }));
+          setPresencas(todasPres);
+        }
       } catch (err) {
         console.error("Erro ao carregar treinos de hoje:", err);
       }
@@ -49,11 +131,12 @@ export default function Dashboard({ user }) {
     carregarTreinosHoje();
   }, []);
 
+  // --- CONTAGEM ATLETAS ---
   useEffect(() => {
     const fetchAtletasCount = async () => {
       try {
-        const snap = await getDocs(collection(db, "atletas")); // lê a coleção toda[web:84][web:87]
-        setTotalAtletas(snap.size); // número de documentos
+        const snap = await getDocs(collection(db, "atletas"));
+        setTotalAtletas(snap.size);
       } catch (err) {
         console.error("Erro ao contar atletas:", err);
       }
@@ -62,11 +145,12 @@ export default function Dashboard({ user }) {
     fetchAtletasCount();
   }, []);
 
+  // --- CONTAGEM ESCALÕES ---
   useEffect(() => {
     const fetchEscaloesCount = async () => {
       try {
-        const snap = await getDocs(collection(db, "escaloes")); // lê a coleção toda[web:84][web:87]
-        setTotalEscaloes(snap.size); // número de documentos
+        const snap = await getDocs(collection(db, "escaloes"));
+        setTotalEscaloes(snap.size);
       } catch (err) {
         console.error("Erro ao contar escaloes:", err);
       }
@@ -75,244 +159,173 @@ export default function Dashboard({ user }) {
     fetchEscaloesCount();
   }, []);
 
+  // --- DETALHES DO TREINO (MODAL) ---
   const abrirTreinoNoModal = async (treino) => {
-  setTreinoSelecionado(treino);
-  try {
-    // atletas do escalão
-    const atletasSnap = await getDocs(collection(db, "atletas"));
-    const todos = atletasSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const doEscalao = todos.filter((a) => a.equipa === treino.equipa);
-    setAtletasDoTreino(doEscalao);
+    setTreinoSelecionado(treino);
+    try {
+      // Atletas desta equipa
+      const doEscalao = atletasDoTreino.filter(
+        (a) => a.equipa === treino.equipa,
+      );
+      setAtletasDoTreino(doEscalao); // guardar só os desta equipa
 
-    // presenças deste treino
-    const q = query(
-      collection(db, "presencas"),
-      where("treinoId", "==", treino.id)
-    );
-    const presSnap = await getDocs(q);
-    const lista = presSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setPresencas(lista);
-  } catch (err) {
-    console.error("Erro ao carregar detalhes do treino:", err);
-  }
-};
+      // Presenças deste treino (já carregadas no useEffect global, mas podemos refiltrar)
+      const presencasFiltradas = presencas.filter(
+        (p) => p.treinoId === treino.id,
+      );
+      setPresencas(presencasFiltradas);
 
+      setShowTreinosHojeModal(true); // abre o modal
+    } catch (err) {
+      console.error("Erro ao carregar detalhes do treino:", err);
+    }
+  };
+
+  
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Real Clube Senhorense
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Bem-vindo de volta, {user?.email?.split("@")[0] || "Admin"}
-            </p>
-          </div>
-
-          {/* ✅ Botão com navigate corrigido */}
-          <button
-            onClick={() => navigate("/atletas")}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Users className="w-4 h-4" />
-            <span>Gerir Atletas</span>
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="stat-card p-6">
+          {/* Total Atletas */}
+          <div onClick={() => navigate("/atletas")} className="p-6 rounded-2xl bg-white shadow-sm border border-slate-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   Total Atletas
                 </p>
-                <p className="text-3xl font-bold text-gray-900">
+                <p className="text-3xl font-bold text-slate-900">
                   {totalAtletas}
                 </p>
               </div>
-              <Users className="w-12 h-12 text-blue-500 bg-blue-100 p-3 rounded-xl" />
+              <Users className="w-12 h-12 text-[#0b1635] bg-[#f5c623]/20 p-3 rounded-xl" />
             </div>
           </div>
 
-          <div className="stat-card p-6">
+          {/* Equipas Ativas */}
+          <div onClick={() => navigate("/escaloes")} className="p-6 rounded-2xl bg-white shadow-sm border border-slate-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   Equipas Ativas
                 </p>
-                <p className="text-3xl font-bold text-gray-900">
+                <p className="text-3xl font-bold text-slate-900">
                   {totalEscaloes}
                 </p>
               </div>
-              <Users2 className="w-12 h-12 text-green-500 bg-green-100 p-3 rounded-xl" />
+              <Users2 className="w-12 h-12 text-emerald-700 bg-emerald-100 p-3 rounded-xl" />
             </div>
           </div>
+        </div>
 
-          <div
-            className="stat-card p-6 cursor-pointer hover:shadow-md transition"
-            onClick={() =>
-              treinosHoje.length > 0 && setShowTreinosHojeModal(true)
-            }
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Treinos Hoje
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {stats.todayTrainings}
-                </p>
-                {treinosHoje.length === 0 && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Nenhum treino marcado hoje
-                  </p>
-                )}
-              </div>
-              <Calendar className="w-12 h-12 text-orange-500 bg-orange-100 p-3 rounded-xl" />
-            </div>
-            {showTreinosHojeModal && (
+        {/* Modal de Gestão de Presenças */}
+{showModalPresencas && treinoSelecionado && (
   <div
-    className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+    className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
     onClick={() => {
-      setShowTreinosHojeModal(false);
+      setShowModalPresencas(false);
       setTreinoSelecionado(null);
-      setAtletasDoTreino([]);
-      setPresencas([]);
     }}
   >
     <div
-      className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+      className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-        <h2 className="text-xl font-bold text-slate-900">
-          Treinos de hoje ({treinosHoje.length})
+      {/* Header */}
+      <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-[#0b1635] to-[#152452] text-white sticky top-0 z-10 rounded-t-2xl">
+        <h2 className="text-xl font-bold">
+          {treinoSelecionado.equipa}
         </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Clique num treino para ver atletas e presenças.
+        <p className="text-sm text-slate-200 mt-1">
+          {treinoSelecionado.data} · {treinoSelecionado.horaInicio}–{treinoSelecionado.horaFim}
+          {treinoSelecionado.local && ` · ${treinoSelecionado.local}`}
+        </p>
+        <p className="text-xs text-[#f5c623] mt-1">
+          Clique nos botões para marcar presença/falta/justificada
         </p>
       </div>
 
-      <div className="p-6 space-y-4">
-        {treinosHoje.length === 0 ? (
-          <p className="text-sm text-slate-500">
-            Não existem treinos marcados para hoje.
-          </p>
+      {/* Lista de atletas */}
+      <div className="p-6 space-y-3">
+        {atletasDoTreino.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum atleta neste escalão.</p>
         ) : (
-          <div className="space-y-3">
-            {treinosHoje.map((treino) => (
-              <button
-                key={treino.id}
-                onClick={() => abrirTreinoNoModal(treino)}
-                className={`w-full text-left p-4 rounded-xl border flex items-center justify-between transition ${
-                  treinoSelecionado?.id === treino.id
-                    ? "bg-blue-50 border-blue-300"
-                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {treino.equipa}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    {treino.data} · {treino.horaInicio}–{treino.horaFim}
-                    {treino.local && ` · ${treino.local}`}
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500">
-                  {presencas.filter((p) => p.treinoId === treino.id && p.estado === "presente").length}{" "}
-                  presentes
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
+          atletasDoTreino
+            .filter(a => a.equipa === treinoSelecionado.equipa)
+            .map((atleta) => {
+              const pres = presencas.find(
+                (p) => p.atletaId === atleta.id && p.treinoId === treinoSelecionado.id
+              );
+              const estadoAtual = pres?.estado || null;
 
-        {treinoSelecionado && (
-          <div className="mt-6 border-t border-slate-200 pt-4">
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">
-              Atletas – {treinoSelecionado.equipa}
-            </h3>
-
-            {atletasDoTreino.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                Nenhum atleta neste escalão.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {atletasDoTreino.map((atleta) => {
-                  const pres = presencas.find(
-                    (p) =>
-                      p.atletaId === atleta.id &&
-                      p.treinoId === treinoSelecionado.id
-                  );
-                  const estado = pres?.estado || "sem-registo";
-
-                  const badge =
-                    estado === "presente"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : estado === "falta"
-                      ? "bg-red-100 text-red-700"
-                      : estado === "justificada"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-slate-100 text-slate-500";
-
-                  const label =
-                    estado === "presente"
-                      ? "Presente"
-                      : estado === "falta"
-                      ? "Falta"
-                      : estado === "justificada"
-                      ? "Justificada"
-                      : "Sem registo";
-
-                  return (
-                    <div
-                      key={atleta.id}
-                      className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-800">
-                          {atleta.nome?.charAt(0) || "?"}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {atleta.nome}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {atleta.posicao || "Sem posição"}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`px-2 py-1 rounded text-[11px] font-medium ${badge}`}
-                      >
-                        {label}
-                      </span>
+              return (
+                <div
+                  key={atleta.id}
+                  className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                >
+                  {/* Info do atleta */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#0b1635] flex items-center justify-center text-sm font-semibold text-white">
+                      {atleta.nome?.charAt(0) || "?"}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {atleta.nome}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {atleta.posicao || "Sem posição"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Botões de presença */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => marcarPresenca(atleta.id, treinoSelecionado.id, "presente")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        estadoAtual === "presente"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      }`}
+                    >
+                      ✓ Presente
+                    </button>
+                    <button
+                      onClick={() => marcarPresenca(atleta.id, treinoSelecionado.id, "falta")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        estadoAtual === "falta"
+                          ? "bg-red-500 text-white"
+                          : "bg-red-100 text-red-700 hover:bg-red-200"
+                      }`}
+                    >
+                      ✗ Falta
+                    </button>
+                    <button
+                      onClick={() => marcarPresenca(atleta.id, treinoSelecionado.id, "justificada")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        estadoAtual === "justificada"
+                          ? "bg-amber-500 text-white"
+                          : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      }`}
+                    >
+                      J
+                    </button>
+                  </div>
+                </div>
+              );
+            })
         )}
       </div>
 
-      <div className="p-4 border-t border-slate-200 bg-slate-50 sticky bottom-0">
+      {/* Footer */}
+      <div className="p-4 border-t border-slate-200 bg-slate-50 sticky bottom-0 rounded-b-2xl">
         <button
           onClick={() => {
-            setShowTreinosHojeModal(false);
+            setShowModalPresencas(false);
             setTreinoSelecionado(null);
-            setAtletasDoTreino([]);
-            setPresencas([]);
           }}
-          className="w-full px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium"
+          className="w-full px-4 py-2 bg-[#0b1635] text-white rounded-lg text-sm font-medium hover:bg-[#152452] transition"
         >
           Fechar
         </button>
@@ -321,112 +334,109 @@ export default function Dashboard({ user }) {
   </div>
 )}
 
-          </div>
 
-          <div className="stat-card p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Taxa Presença
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {stats.attendanceRate}%
-                </p>
-              </div>
-              <BarChart3 className="w-12 h-12 text-purple-500 bg-purple-100 p-3 rounded-xl" />
-            </div>
-          </div>
-        </div>
+        {/* Próximos Treinos */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase mb-6 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-slate-500" />
+            <span>Treinos de Hoje</span>
+          </h2>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-gray-500" />
-              <span>Próximos Treinos</span>
-            </h2>
+          {treinosHoje.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Não existem treinos marcados para hoje.
+            </p>
+          ) : (
             <div className="space-y-4">
-              <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-l-4 border-blue-500">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="font-semibold text-gray-900">
-                      Sub-16 Feminino
-                    </span>
+              {treinosHoje.map((treino) => {
+                // calcular presenças deste treino
+                const presencasTreino = presencas.filter(
+                  (p) => p.treinoId === treino.id,
+                );
+                const totalAtletasTreino = atletasDoTreino.filter(
+                  (a) => a.equipa === treino.equipa,
+                ).length;
+                const presentes = presencasTreino.filter(
+                  (p) => p.estado === "presente",
+                ).length;
+                const faltas = presencasTreino.filter(
+                  (p) => p.estado === "falta",
+                ).length;
+                const justificadas = presencasTreino.filter(
+                  (p) => p.estado === "justificada",
+                ).length;
+
+                const percentagemPresenca =
+                  totalAtletasTreino > 0
+                    ? Math.round((presentes / totalAtletasTreino) * 100)
+                    : 0;
+
+                return (
+                  <div
+                    key={treino.id}
+                    onClick={async () => {
+                      setTreinoSelecionado(treino);
+                      const doEscalao = atletasDoTreino.filter(
+                        (a) => a.equipa === treino.equipa,
+                      );
+                      setAtletasDoTreino(doEscalao);
+                      const presencasFiltradas = presencas.filter(
+                        (p) => p.treinoId === treino.id,
+                      );
+                      setPresencas(presencasFiltradas);
+                      setShowModalPresencas(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center p-4 bg-gradient-to-r from-[#0b1635] to-[#152452] rounded-xl border-l-4 border-[#f5c623] hover:shadow-lg transition-shadow">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                          <span className="font-semibold text-white">
+                            {treino.equipa}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-200">
+                          {treino.horaInicio} - {treino.horaFim} |{" "}
+                          {treino.local || "Pavilhão Principal"}
+                        </p>
+                        <p className="text-sm font-medium text-[#f5c623] mt-1">
+                          {treino.treinador || "Sem treinador"}
+                        </p>
+                      </div>
+
+                      {/* Percentagem de presença */}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-300">
+                            Presença:
+                          </span>
+                          <span className="text-lg font-bold text-[#f5c623]">
+                            {percentagemPresenca}%
+                          </span>
+                        </div>
+                        <div className="flex gap-2 text-xs">
+                          <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded">
+                            {presentes} ✓
+                          </span>
+                          <span className="px-2 py-1 bg-red-100 text-red-800 rounded">
+                            {faltas} ✗
+                          </span>
+                          {justificadas > 0 && (
+                            <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded">
+                              {justificadas} J
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    18:00 - 19:30 | Pavilhão Principal
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    João Silva
-                  </p>
-                </div>
-                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                  Confirmado
-                </span>
-              </div>
-
-              <div className="flex items-center p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border-l-4 border-orange-500">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-1">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                    <span className="font-semibold text-gray-900">
-                      Sub-18 Masculino
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    19:30 - 21:00 | Pavilhão Principal
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    Maria Santos
-                  </p>
-                </div>
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">
-                  Pendente
-                </span>
-              </div>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">
-              Ações Rápidas
-            </h2>
-            <div className="space-y-3">
-              {/* ✅ Botões com navigate */}
-              <button
-                onClick={() => navigate("/atletas")}
-                className="w-full flex items-center space-x-3 p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl hover:bg-blue-100 hover:border-blue-300 transition-all group"
-              >
-                <Users className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
-                <span className="text-left font-medium text-gray-900">
-                  Gerir Atletas
-                </span>
-              </button>
-
-              <button
-                onClick={() => navigate("/calendario")}
-                className="w-full flex items-center space-x-3 p-4 bg-green-50 border-2 border-dashed border-green-200 rounded-xl hover:bg-green-100 hover:border-green-300 transition-all group"
-              >
-                <Calendar className="w-6 h-6 text-green-600 group-hover:scale-110 transition-transform" />
-                <span className="text-left font-medium text-gray-900">
-                  Calendário
-                </span>
-              </button>
-
-              <button
-                onClick={() => navigate("/relatorios")}
-                className="w-full flex items-center space-x-3 p-4 bg-purple-50 border-2 border-dashed border-purple-200 rounded-xl hover:bg-purple-100 hover:border-purple-300 transition-all group"
-              >
-                <BarChart3 className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
-                <span className="text-left font-medium text-gray-900">
-                  Relatórios
-                </span>
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

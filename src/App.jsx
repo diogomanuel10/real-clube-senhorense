@@ -5,11 +5,11 @@ import { auth } from './utils/firebase';
 import Dashboard from './pages/Dashboard';
 import Atletas from './pages/Atletas';
 import Login from './pages/Login';
-import Layout from './components/Layout';
 import Treinos from './pages/Treinos';
 import Escaloes from './pages/Escaloes';
 
 import './styles/globals.css';
+import DashboardLayout from './components/DashboardLayout';
 
 function AppContent({ user }) {
   return (
@@ -17,10 +17,30 @@ function AppContent({ user }) {
       {user ? (
         <>
          <Route path="/" element={<Dashboard user={user} />} />
-<Route path="/atletas" element={<Atletas user={user} />} />
-<Route path="/treinos" element={<Treinos user={user} />} />
-<Route path="/escaloes" element={<Escaloes user={user} />} />
-
+ <Route
+            path="/atletas"
+            element={
+              <DashboardLayout>
+                <Atletas user={user} />
+              </DashboardLayout>
+            }
+          />
+       <Route
+  path="/treinos"
+  element={
+    <DashboardLayout>
+      <Treinos user={user} />
+    </DashboardLayout>
+  }
+/>
+          <Route
+            path="/escaloes"
+            element={
+              <DashboardLayout>
+                <Escaloes user={user} />
+              </DashboardLayout>
+            }
+          />
         </>
       ) : (
         <Route path="/" element={<Login />} />
@@ -54,9 +74,9 @@ function App() {
   return (
     <Router>
       {user ? (
-        <Layout>
+       
           <AppContent user={user} />
-        </Layout>
+       
       ) : (
         <AppContent user={null} />
       )}
