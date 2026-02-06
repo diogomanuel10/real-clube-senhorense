@@ -37,7 +37,9 @@ const MESES = [
   "Dezembro",
 ];
 
+
 export default function Treinos({ user }) {
+  const [treinadores, setTreinadores] = useState([]);
   const [treinos, setTreinos] = useState([]);
   const [escaloes, setEscaloes] = useState([]);
   const [presencas, setPresencas] = useState([]);        // cache opcional
@@ -63,7 +65,19 @@ const [savingPresenca, setSavingPresenca] = useState(false);
     carregarEscaloes();
     carregarTreinos();
     carregarPlanos();
+    carregarTreinadores();
   }, []);
+
+const carregarTreinadores = async () => {
+  try {
+    const snap = await getDocs(collection(db, "treinadores"));
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setTreinadores(lista);
+  } catch (err) {
+    console.error("Erro ao carregar treinadores:", err);
+  }
+};
+
 
   const handleClickTreino = async (treino) => {
   setTreinoSelecionado(treino);

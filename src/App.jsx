@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './utils/firebase';
 import Dashboard from './pages/Dashboard';
 import Atletas from './pages/Atletas';
+import Captacoes from "./pages/Captacoes";
 import Login from './pages/Login';
 import Treinos from './pages/Treinos';
 import Escaloes from './pages/Escaloes';
@@ -46,6 +47,14 @@ function AppContent({ user }) {
   element={
     <DashboardLayout>
       <Treinos user={user} />
+    </DashboardLayout>
+  }
+/>
+<Route
+  path="/captacoes"
+  element={
+    <DashboardLayout>
+      <Captacoes />
     </DashboardLayout>
   }
 />
