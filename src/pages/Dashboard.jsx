@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import { Users, Users2, Calendar, BarChart3 } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, Activity } from "lucide-react";
 import {
   collection,
   getDocs,
@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 export default function Dashboard({ user }) {
   const [totalAtletas, setTotalAtletas] = useState(0);
   const [totalEscaloes, setTotalEscaloes] = useState(0);
+  const [atletasComEpisodioAtivo, setAtletasComEpisodioAtivo] = useState(0);
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -76,6 +77,36 @@ export default function Dashboard({ user }) {
       console.error("Erro ao marcar presença:", err);
     }
   };
+
+  useEffect(() => {
+  const contarAtletasComEpisodioAtivo = async () => {
+    try {
+      const qEpis = query(
+        collection(db, "episodiosClinicos"),
+        where("estado", "==", "ativo")
+      );
+      const snap = await getDocs(qEpis);
+
+      const idsUnicos = new Set();
+      snap.forEach((docu) => {
+        const data = docu.data();
+        if (data.atletaId) {
+          idsUnicos.add(data.atletaId);
+        }
+      });
+
+      setAtletasComEpisodioAtivo(idsUnicos.size);
+    } catch (err) {
+      console.error(
+        "Erro ao contar atletas com episódio clínico ativo:",
+        err
+      );
+    }
+  };
+
+  contarAtletasComEpisodioAtivo();
+}, []);
+
 
   // --- TREINOS HOJE + PRESENÇAS + ATLETAS ---
   useEffect(() => {
@@ -217,6 +248,24 @@ export default function Dashboard({ user }) {
               <Users2 className="w-12 h-12 text-emerald-700 bg-emerald-100 p-3 rounded-xl" />
             </div>
           </div>
+
+          {/* Atletas com episódio clínico ativo */}
+<div
+  onClick={() => navigate("/atletas")} // ou página específica de médico
+  className="p-6 rounded-2xl bg-white shadow-sm border border-slate-100 cursor-pointer hover:shadow-md transition"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+        Atletas em acompanhamento
+      </p>
+      <p className="text-3xl font-bold text-slate-900">
+        {atletasComEpisodioAtivo}
+      </p>
+    </div>
+    <Activity className="w-12 h-12 text-emerald-700 bg-emerald-100 p-3 rounded-xl" />
+  </div>
+</div>
         </div>
 
         {/* Modal de Gestão de Presenças */}

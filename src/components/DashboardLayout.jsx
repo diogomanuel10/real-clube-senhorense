@@ -1,5 +1,5 @@
 // DashboardLayout.jsx
-import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus,ClipboardCheck, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const navItems = [
@@ -9,10 +9,20 @@ const navItems = [
   { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos" },
   { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes" },
   { id: "treinadores", label: "Treinadores", icon: UserCog, path: "/treinadores" },
+  { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas" }, 
 ];
 
 export default function DashboardLayout({ children }) {
   const navigate = useNavigate();
+  
+
+  const handleLogout = () => {
+    // limpa o que estiveres a usar para sessão
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // redireciona para a página de login ou home
+    navigate("/login");
+  };
 
   return (
     <div className="flex min-h-screen bg-[#f3f4f6]">
@@ -94,14 +104,15 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-              <span className="text-[11px] uppercase tracking-[0.2em] text-[#f5c623]">
-                vontade de vencer
-              </span>
-            </div>
-            <div className="h-9 w-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs">
-              RCS
-            </div>
+            
+            <button
+      onClick={handleLogout}
+      className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs hover:bg-red-500 hover:border-red-400 hover:text-white transition-colors"
+    >
+      <LogOut className="w-4 h-4" />
+      <span className="hidden sm:inline"></span>
+    </button>
+        
           </div>
         </header>
 

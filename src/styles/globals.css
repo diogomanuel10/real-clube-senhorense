@@ -22,7 +22,7 @@ body {
 #root {
   height: 100%; /* ← MUDANÇA: altura fixa em vez de min-height */
   width: 100%;
-  overflow: hidden; /* ← MUDANÇA: bloqueia ambos aqui */
+   /* ← MUDANÇA: bloqueia ambos aqui */
 }
 
 /* Classes utilitárias */

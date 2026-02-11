@@ -9,6 +9,10 @@ import Login from './pages/Login';
 import Treinos from './pages/Treinos';
 import Escaloes from './pages/Escaloes';
 import Treinadores from "./pages/Treinadores";
+import Presencas from "./pages/Presencas";
+import AtletaPerfil from "./pages/AtletaPerfil";
+
+
 import './styles/globals.css';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -26,6 +30,17 @@ function AppContent({ user }) {
               </DashboardLayout>
             }
           />
+          <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
+          <Route
+  path="/admin/utilizadores"
+  element={
+    user?.role === "admin" ? (
+      <AdminUsers user={user} />
+    ) : (
+      <Navigate to="/" replace />
+    )
+  }
+/>
           <Route
   path="/treinadores"
   element={
@@ -47,6 +62,14 @@ function AppContent({ user }) {
   element={
     <DashboardLayout>
       <Treinos user={user} />
+    </DashboardLayout>
+  }
+/>
+<Route
+  path="/presencas"
+  element={
+    <DashboardLayout>
+      <Presencas />
     </DashboardLayout>
   }
 />

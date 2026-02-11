@@ -36,18 +36,17 @@ export default function Atletas({ user }) {
   const [filtroEscalao, setFiltroEscalao] = useState("");
   const [importing, setImporting] = useState(false);
   const [formData, setFormData] = useState({
-    nome: "",
-    idade: "",
-    equipa: "",
-    posicao: "",
-    telefone: "",
-    email: "",
-    documentos: {
-      cc: "",
-      exameMedico: "",
-    },
-    observacoes: "",
-  });
+  nome: "",
+  idade: "",
+  equipa: "",
+  posicao: "",
+  telefone: "",
+  email: "",
+  fotoUrl: "",          // NOVO
+  documentos: { cc: "", exameMedico: "" },
+  observacoes: "",
+});
+
 
   useEffect(() => {
   loadAtletas();
@@ -100,16 +99,18 @@ export default function Atletas({ user }) {
     e.preventDefault();
 
     try {
-      const atletaData = {
-        nome: formData.nome,
-        idade: formData.idade,
-        equipa: formData.equipa,
-        posicao: formData.posicao,
-        telefone: formData.telefone,
-        email: formData.email,
-        documentos: formData.documentos,
-        observacoes: formData.observacoes,
-      };
+     const atletaData = {
+  nome: formData.nome,
+  idade: formData.idade,
+  equipa: formData.equipa,
+  posicao: formData.posicao,
+  telefone: formData.telefone,
+  email: formData.email,
+  fotoUrl: formData.fotoUrl,       // NOVO
+  documentos: formData.documentos,
+  observacoes: formData.observacoes,
+};
+
 
       if (editingAtleta) {
         const ref = doc(db, "atletas", editingAtleta.id);
@@ -331,60 +332,38 @@ export default function Atletas({ user }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAtletas.map((atleta) => (
-              <div
-                key={atleta.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br  from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">
-                        {atleta.nome?.charAt(0) || "?"}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">
-                          {atleta.nome || "Sem nome"}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {atleta.equipa || "Sem equipa"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => {
-                          setEditingAtleta(atleta);
-                          setFormData({
-                            nome: atleta.nome || "",
-                            idade: atleta.idade || "",
-                            equipa: atleta.equipa || "",
-                            posicao: atleta.posicao || "",
-                            telefone: atleta.telefone || "",
-                            email: atleta.email || "",
-                            documentos: {
-                              cc: atleta.documentos?.cc || "",
-                              exameMedico: atleta.documentos?.exameMedico || "",
-                            },
-                            observacoes: atleta.observacoes || "",
-                          });
-                          setShowAddModal(true);
-                        }}
-                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all"
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(atleta.id)}
-                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+             <div
+  key={atleta.id}
+  onClick={() => navigate(`/atletas/${atleta.id}`)}
+  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer"
+>
+  <div className="p-6">
+    <div className="flex items-start justify-between mb-4">
+      {/* ... */}
+     
+    </div>
 
                   <div className="space-y-2 mb-6">
+             {atleta.fotoUrl ? (
+      <img
+        src={atleta.fotoUrl}
+        alt={atleta.nome}
+        className="w-12 h-12 rounded-2xl object-cover border border-gray-200"
+      />
+    ) : (
+      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">
+        {atleta.nome?.charAt(0) || "?"}
+      </div>
+    )}
+    <div className="flex flex-col">
+      <span className="text-sm font-semibold text-gray-900">
+        {atleta.nome || "Sem nome"}
+      </span>
+      <span className="text-xs text-gray-500">
+        {atleta.equipa || "Sem equipa"}
+      </span>
+    </div>
+  
                     {atleta.idade && (
                       <div className="flex items-center text-sm">
                         <span className="w-24 text-gray-500">Idade:</span>
@@ -460,252 +439,6 @@ export default function Atletas({ user }) {
         )}
       </main>
 
-      {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          onClick={() => {
-            setShowAddModal(false);
-            setEditingAtleta(null);
-            resetForm();
-          }}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
-                <Users className="w-8 h-8 text-blue-600" />
-                <span>{editingAtleta ? "Editar Atleta" : "Nova Atleta"}</span>
-              </h2>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* Dados Pessoais */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Dados Pessoais
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nome Completo *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.nome}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nome: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ex: Ana Rodrigues Silva"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Idade *
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.idade}
-                        onChange={(e) =>
-                          setFormData({ ...formData, idade: e.target.value })
-                        }
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                        placeholder="16"
-                        min="6"
-                        max="99"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Documentos */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <FileText className="w-5 h-5 mr-2 text-blue-600" />
-                  Documentação
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cartão de Cidadão (Nº)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.documentos.cc}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          documentos: {
-                            ...formData.documentos,
-                            cc: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                      placeholder="12345678 9 ZZ0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Exame Médico (Validade)
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.documentos.exameMedico}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          documentos: {
-                            ...formData.documentos,
-                            exameMedico: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Equipa e Posição */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Dados Desportivos
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Equipa *
-                    </label>
-                    <select
-                      value={formData.equipa}
-                      onChange={(e) =>
-                        setFormData({ ...formData, equipa: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Selecione um escalão</option>
-                      {escaloes.map((esc) => (
-                        <option key={esc.id} value={esc.nome}>
-                          {esc.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Posição *
-                    </label>
-                    <select
-                      value={formData.posicao}
-                      onChange={(e) =>
-                        setFormData({ ...formData, posicao: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Selecione posição</option>
-                      {positions.map((pos) => (
-                        <option key={pos} value={pos}>
-                          {pos}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contactos */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Contactos
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Telefone *
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.telefone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, telefone: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                      placeholder="916 123 456"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                      placeholder="ana.rodrigues@email.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Observações */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Observações
-                </h3>
-                <textarea
-                  value={formData.observacoes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, observacoes: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none"
-                  rows="4"
-                  placeholder="Notas adicionais, lesões, alergias, etc..."
-                />
-              </div>
-
-              {/* Botões */}
-              <div className="flex space-x-4 pt-4 sticky bottom-0 bg-white pb-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingAtleta(null);
-                    resetForm();
-                  }}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 py-3 px-4 rounded-xl font-medium transition-all"
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="flex-1 btn-primary">
-                  <Plus className="w-4 h-4" />
-                  {editingAtleta ? "Guardar Alterações" : "Adicionar Atleta"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
