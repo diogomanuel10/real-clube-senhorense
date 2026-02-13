@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './utils/firebase';
 import Dashboard from './pages/Dashboard';
+import DashboardLayout from './components/DashboardLayout';
 import Atletas from './pages/Atletas';
 import Captacoes from "./pages/Captacoes";
 import Login from './pages/Login';
@@ -11,76 +13,86 @@ import Escaloes from './pages/Escaloes';
 import Treinadores from "./pages/Treinadores";
 import Presencas from "./pages/Presencas";
 import AtletaPerfil from "./pages/AtletaPerfil";
-
+import AdminUsers from "./pages/AdminUsers";
 
 import './styles/globals.css';
-import DashboardLayout from './components/DashboardLayout';
+
+
 
 function AppContent({ user }) {
   return (
     <Routes>
       {user ? (
         <>
-         <Route path="/" element={<Dashboard user={user} />} />
- <Route
+          <Route path="/" element={<Dashboard user={user} />} />
+
+          <Route
             path="/atletas"
             element={
-              <DashboardLayout>
+              <DashboardLayout user={user}>
                 <Atletas user={user} />
               </DashboardLayout>
             }
           />
-          <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
+
           <Route
-  path="/admin/utilizadores"
-  element={
-    user?.role === "admin" ? (
-      <AdminUsers user={user} />
-    ) : (
-      <Navigate to="/" replace />
-    )
-  }
-/>
+            path="/atletas/:id"
+            element={<AtletaPerfil user={user} />}
+          />
+
           <Route
-  path="/treinadores"
-  element={
-    <DashboardLayout>
-      <Treinadores />
-    </DashboardLayout>
-  }
-/>
-<Route
+            path="/admin/utilizadores"
+            element={
+            
+                <AdminUsers user={user} />
+            
+            }
+          />
+
+          <Route
+            path="/treinadores"
+            element={
+              <DashboardLayout user={user}>
+                <Treinadores user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
             path="/escaloes"
             element={
-              <DashboardLayout>
+              <DashboardLayout user={user}>
                 <Escaloes user={user} />
               </DashboardLayout>
             }
           />
-       <Route
-  path="/treinos"
-  element={
-    <DashboardLayout>
-      <Treinos user={user} />
-    </DashboardLayout>
-  }
-/>
-<Route
-  path="/presencas"
-  element={
-    <DashboardLayout>
-      <Presencas />
-    </DashboardLayout>
-  }
-/>
-<Route
-  path="/captacoes"
-  element={
-    <DashboardLayout>
-      <Captacoes />
-    </DashboardLayout>
-  }
-/>
+
+          <Route
+            path="/treinos"
+            element={
+              <DashboardLayout user={user}>
+                <Treinos user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/presencas"
+            element={
+              <DashboardLayout user={user}>
+                <Presencas user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/captacoes"
+            element={
+              <DashboardLayout user={user}>
+                <Captacoes user={user} />
+              </DashboardLayout>
+            }
+          />
         </>
       ) : (
         <Route path="/" element={<Login />} />
@@ -96,12 +108,49 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const ref = doc(db, "utilizadores", currentUser.uid);
+          const snap = await getDoc(ref);
+
+          if (snap.exists()) {
+            const data = snap.data();
+            const roleFromDb = data.role || data.perfil || "viewer";
+
+            const userToSet = {
+              ...currentUser,
+              role: roleFromDb,
+              displayName: data.nome || currentUser.displayName,
+            };
+
+            setUser(userToSet);
+          } else {
+            setUser({
+                ...currentUser,
+                ...data,            // <-- isto traz "equipas", idade, etc.
+                role: roleFromDb,
+                displayName: data.nome || currentUser.displayName,
+            });
+          }
+        } catch (err) {
+          console.error("Erro ao buscar dados:", err);
+          setUser({
+            ...currentUser,
+            role: "viewer",
+          });
+        }
+      } else {
+        setUser(null);
+      }
+
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
+
+  console.log("STATE user em App:", user);
 
   if (loading) {
     return (
@@ -113,15 +162,11 @@ function App() {
 
   return (
     <Router>
-      {user ? (
-       
-          <AppContent user={user} />
-       
-      ) : (
-        <AppContent user={null} />
-      )}
+      {/* Só uma instância de AppContent, recebe sempre o state atual */}
+      <AppContent user={user} />
     </Router>
   );
 }
+
 
 export default App;

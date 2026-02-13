@@ -24,8 +24,10 @@ import {
 import { db } from "../utils/firebase";
 import Papa from "papaparse";
 
-
 export default function Atletas({ user }) {
+  const isAdmin = user?.role === "admin" || user?.role === "direcao";
+  const isTreinador = user?.role === "treinador";
+  const equipasUser = Array.isArray(user?.equipas) ? user.equipas : [];
   const navigate = useNavigate();
   const [atletas, setAtletas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,21 +38,20 @@ export default function Atletas({ user }) {
   const [filtroEscalao, setFiltroEscalao] = useState("");
   const [importing, setImporting] = useState(false);
   const [formData, setFormData] = useState({
-  nome: "",
-  idade: "",
-  equipa: "",
-  posicao: "",
-  telefone: "",
-  email: "",
-  fotoUrl: "",          // NOVO
-  documentos: { cc: "", exameMedico: "" },
-  observacoes: "",
-});
-
+    nome: "",
+    idade: "",
+    equipa: "",
+    posicao: "",
+    telefone: "",
+    email: "",
+    fotoUrl: "", // NOVO
+    documentos: { cc: "", exameMedico: "" },
+    observacoes: "",
+  });
 
   useEffect(() => {
-  loadAtletas();
-}, []);
+    loadAtletas();
+  }, []);
 
   useEffect(() => {
     const carregarEscaloes = async () => {
@@ -90,7 +91,15 @@ export default function Atletas({ user }) {
       atleta.nome?.toLowerCase().includes(search.toLowerCase()) ||
       atleta.equipa?.toLowerCase().includes(search.toLowerCase());
 
-    const matchEscalao = filtroEscalao ? atleta.equipa === filtroEscalao : true;
+    // Se for admin/direção, aplica filtro manual (dropdown).
+    // Se for treinador, mostra apenas equipas atribuídas, ignorando dropdown.
+    const matchEscalao = isAdmin
+      ? filtroEscalao
+        ? atleta.equipa === filtroEscalao
+        : true
+      : isTreinador && equipasUser.length > 0
+        ? equipasUser.includes(atleta.equipa)
+        : true;
 
     return matchTexto && matchEscalao;
   });
@@ -99,18 +108,17 @@ export default function Atletas({ user }) {
     e.preventDefault();
 
     try {
-     const atletaData = {
-  nome: formData.nome,
-  idade: formData.idade,
-  equipa: formData.equipa,
-  posicao: formData.posicao,
-  telefone: formData.telefone,
-  email: formData.email,
-  fotoUrl: formData.fotoUrl,       // NOVO
-  documentos: formData.documentos,
-  observacoes: formData.observacoes,
-};
-
+      const atletaData = {
+        nome: formData.nome,
+        idade: formData.idade,
+        equipa: formData.equipa,
+        posicao: formData.posicao,
+        telefone: formData.telefone,
+        email: formData.email,
+        fotoUrl: formData.fotoUrl, // NOVO
+        documentos: formData.documentos,
+        observacoes: formData.observacoes,
+      };
 
       if (editingAtleta) {
         const ref = doc(db, "atletas", editingAtleta.id);
@@ -143,20 +151,6 @@ export default function Atletas({ user }) {
       observacoes: "",
     });
   };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Eliminar atleta?")) {
-      try {
-        await deleteDoc(doc(db, "atletas", id));
-        loadAtletas();
-        alert("Atleta eliminado!");
-      } catch (error) {
-        alert("Erro ao eliminar: " + error.message);
-      }
-    }
-  };
-
-  const positions = ["Central", "Ponta", "Distribuidora", "Líbero", "Oposta"];
 
   // ---------- IMPORTAR DO SHEETS (CSV) ----------
   const handleImportCSV = (event) => {
@@ -249,6 +243,7 @@ export default function Atletas({ user }) {
           </div>
 
           <div className="flex items-center space-x-3">
+            
             <div>
               <input
                 id="import-csv-input"
@@ -332,38 +327,37 @@ export default function Atletas({ user }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAtletas.map((atleta) => (
-             <div
-  key={atleta.id}
-  onClick={() => navigate(`/atletas/${atleta.id}`)}
-  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer"
->
-  <div className="p-6">
-    <div className="flex items-start justify-between mb-4">
-      {/* ... */}
-     
-    </div>
+              <div
+                key={atleta.id}
+                onClick={() => navigate(`/atletas/${atleta.id}`)}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer"
+              >
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    {/* ... */}
+                  </div>
 
                   <div className="space-y-2 mb-6">
-             {atleta.fotoUrl ? (
-      <img
-        src={atleta.fotoUrl}
-        alt={atleta.nome}
-        className="w-12 h-12 rounded-2xl object-cover border border-gray-200"
-      />
-    ) : (
-      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">
-        {atleta.nome?.charAt(0) || "?"}
-      </div>
-    )}
-    <div className="flex flex-col">
-      <span className="text-sm font-semibold text-gray-900">
-        {atleta.nome || "Sem nome"}
-      </span>
-      <span className="text-xs text-gray-500">
-        {atleta.equipa || "Sem equipa"}
-      </span>
-    </div>
-  
+                    {atleta.fotoUrl ? (
+                      <img
+                        src={atleta.fotoUrl}
+                        alt={atleta.nome}
+                        className="w-12 h-12 rounded-2xl object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">
+                        {atleta.nome?.charAt(0) || "?"}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {atleta.nome || "Sem nome"}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {atleta.equipa || "Sem equipa"}
+                      </span>
+                    </div>
+
                     {atleta.idade && (
                       <div className="flex items-center text-sm">
                         <span className="w-24 text-gray-500">Idade:</span>
@@ -438,7 +432,6 @@ export default function Atletas({ user }) {
           </div>
         )}
       </main>
-
     </div>
   );
 }

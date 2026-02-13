@@ -11,13 +11,14 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { db, auth } from "../utils/firebase";
 import { ChevronLeft, Users, Activity, Calendar } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 
 const positions = ["Central", "Ponta", "Distribuidora", "Líbero", "Oposta"];
 
 export default function AtletaPerfil({ user }) {
+  console.log("USER", user)
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -25,9 +26,9 @@ export default function AtletaPerfil({ user }) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("dados");
 
-// Presenças
-const [presencasAtleta, setPresencasAtleta] = useState([]);
-const [loadingPresencas, setLoadingPresencas] = useState(true);
+  // Presenças
+  const [presencasAtleta, setPresencasAtleta] = useState([]);
+  const [loadingPresencas, setLoadingPresencas] = useState(true);
 
   const [atleta, setAtleta] = useState(null);
   const [formData, setFormData] = useState({
@@ -37,9 +38,13 @@ const [loadingPresencas, setLoadingPresencas] = useState(true);
     posicao: "",
     telefone: "",
     email: "",
+    fotoUrl: "",
     documentos: { cc: "", exameMedico: "" },
     observacoes: "",
   });
+
+  //Edição
+  const podeEditar = user?.role == "admin";
 
   // Fisio – episódios
   const [episodios, setEpisodios] = useState([]);
@@ -86,6 +91,7 @@ const [loadingPresencas, setLoadingPresencas] = useState(true);
           posicao: data.posicao || "",
           telefone: data.telefone || "",
           email: data.email || "",
+          fotoUrl: data.fotoUrl || "",
           documentos: {
             cc: data.documentos?.cc || "",
             exameMedico: data.documentos?.exameMedico || "",
@@ -105,7 +111,7 @@ const [loadingPresencas, setLoadingPresencas] = useState(true);
         const qEpis = query(
           collection(db, "episodiosClinicos"),
           where("atletaId", "==", id),
-          orderBy("dataInicio", "desc")
+          orderBy("dataInicio", "desc"),
         );
         const snap = await getDocs(qEpis);
         const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -118,48 +124,48 @@ const [loadingPresencas, setLoadingPresencas] = useState(true);
     };
 
     const fetchPresencasAtleta = async () => {
-    try {
-      const qPres = query(
-        collection(db, "presencas"),
-        where("atletaId", "==", id)
-      );
-      const snap = await getDocs(qPres);
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setPresencasAtleta(lista);
-    } catch (err) {
-      console.error("Erro ao carregar presenças do atleta:", err);
-    } finally {
-      setLoadingPresencas(false);
-    }
-  };
+      try {
+        const qPres = query(
+          collection(db, "presencas"),
+          where("atletaId", "==", id),
+        );
+        const snap = await getDocs(qPres);
+        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPresencasAtleta(lista);
+      } catch (err) {
+        console.error("Erro ao carregar presenças do atleta:", err);
+      } finally {
+        setLoadingPresencas(false);
+      }
+    };
 
-  fetchAtleta();
-  fetchEpisodios();
-  fetchPresencasAtleta();
+    fetchAtleta();
+    fetchEpisodios();
+    fetchPresencasAtleta();
   }, [id, navigate]);
 
   // Carregar sessões de um episódio
-const carregarSessoes = async (episodioId) => {
-  if (episodioAtivo === episodioId) {
-    // se já está aberto, fecha
-    setEpisodioAtivo(null);
-    setSessoes([]);
-    return;
-  }
+  const carregarSessoes = async (episodioId) => {
+    if (episodioAtivo === episodioId) {
+      // se já está aberto, fecha
+      setEpisodioAtivo(null);
+      setSessoes([]);
+      return;
+    }
 
-  setLoadingSessoes(true);
-  try {
-    const ref = collection(db, "episodiosClinicos", episodioId, "sessoes");
-    const snap = await getDocs(query(ref, orderBy("dataSessao", "desc")));
-    setSessoes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    setEpisodioAtivo(episodioId);
-  } catch (err) {
-    console.error("Erro ao carregar sessões:", err);
-    alert("Erro ao carregar sessões deste episódio.");
-  } finally {
-    setLoadingSessoes(false);
-  }
-};
+    setLoadingSessoes(true);
+    try {
+      const ref = collection(db, "episodiosClinicos", episodioId, "sessoes");
+      const snap = await getDocs(query(ref, orderBy("dataSessao", "desc")));
+      setSessoes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setEpisodioAtivo(episodioId);
+    } catch (err) {
+      console.error("Erro ao carregar sessões:", err);
+      alert("Erro ao carregar sessões deste episódio.");
+    } finally {
+      setLoadingSessoes(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -249,17 +255,17 @@ const carregarSessoes = async (episodioId) => {
                   <Activity className="w-4 h-4" />
                   Fisioterapia
                 </button>
-                 <button
-    onClick={() => setTab("presencas")}
-    className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition ${
-      tab === "presencas"
-        ? "bg-white text-amber-700 shadow-sm"
-        : "text-gray-600 hover:text-gray-900"
-    }`}
-  >
-    <Calendar className="w-4 h-4" />
-    Presenças
-  </button>
+                <button
+                  onClick={() => setTab("presencas")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition ${
+                    tab === "presencas"
+                      ? "bg-white text-amber-700 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  Presenças
+                </button>
               </div>
             </div>
           </div>
@@ -283,15 +289,47 @@ const carregarSessoes = async (episodioId) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nome Completo *
                     </label>
+                    {podeEditar ? (
+                      <input
+                        type="text"
+                        value={formData.nome}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nome: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.nome || "Sem nome"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Link da foto (Google Drive)
+                    </label>
+                    {podeEditar ? (
                     <input
-                      type="text"
-                      value={formData.nome}
+                      type="url"
+                      value={formData.fotoUrl}
                       onChange={(e) =>
-                        setFormData({ ...formData, nome: e.target.value })
+                        setFormData({ ...formData, fotoUrl: e.target.value })
                       }
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
+                      placeholder="https://drive.google.com/uc?export=view&id=..."
                     />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.fotoUrl || "Sem nome"}
+                      </p>
+                    )}
+                    {formData.fotoUrl && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        A imagem será usada na lista de atletas e no perfil.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -299,6 +337,7 @@ const carregarSessoes = async (episodioId) => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Idade *
                       </label>
+                      {podeEditar ? (
                       <input
                         type="number"
                         value={formData.idade}
@@ -310,11 +349,17 @@ const carregarSessoes = async (episodioId) => {
                         max={99}
                         required
                       />
+                      ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.idade || "Sem nome"}
+                      </p>
+                    )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Telefone *
                       </label>
+                         {podeEditar ? (
                       <input
                         type="tel"
                         value={formData.telefone}
@@ -327,11 +372,17 @@ const carregarSessoes = async (episodioId) => {
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                         required
                       />
+                          ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.telefone || "Sem nome"}
+                      </p>
+                    )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email
                       </label>
+                       {podeEditar ? (
                       <input
                         type="email"
                         value={formData.email}
@@ -340,6 +391,11 @@ const carregarSessoes = async (episodioId) => {
                         }
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                       />
+                            ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.email || "Sem nome"}
+                      </p>
+                    )}
                     </div>
                   </div>
                 </div>
@@ -355,6 +411,7 @@ const carregarSessoes = async (episodioId) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Equipa / Escalão *
                     </label>
+                     {podeEditar ? (
                     <input
                       type="text"
                       value={formData.equipa}
@@ -364,11 +421,17 @@ const carregarSessoes = async (episodioId) => {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                       required
                     />
+                            ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.equipa || "Sem nome"}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Posição *
                     </label>
+                     {podeEditar ? (
                     <select
                       value={formData.posicao}
                       onChange={(e) =>
@@ -384,6 +447,11 @@ const carregarSessoes = async (episodioId) => {
                         </option>
                       ))}
                     </select>
+                             ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.posicao || "Sem nome"}
+                      </p>
+                    )}
                   </div>
                 </div>
               </section>
@@ -398,6 +466,7 @@ const carregarSessoes = async (episodioId) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cartão de Cidadão
                     </label>
+                     {podeEditar ? (
                     <input
                       type="text"
                       value={formData.documentos.cc}
@@ -413,11 +482,17 @@ const carregarSessoes = async (episodioId) => {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                       placeholder="12345678 9 ZZ0"
                     />
+                            ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.documentos.cc || "Sem nome"}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Exame Médico (validade)
                     </label>
+                     {podeEditar ? (
                     <input
                       type="date"
                       value={formData.documentos.exameMedico}
@@ -432,6 +507,11 @@ const carregarSessoes = async (episodioId) => {
                       }
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                     />
+                           ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.documentos.exameMedico || "Sem nome"}
+                      </p>
+                    )}
                   </div>
                 </div>
               </section>
@@ -441,6 +521,7 @@ const carregarSessoes = async (episodioId) => {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Observações
                 </h2>
+                {podeEditar ? (
                 <textarea
                   value={formData.observacoes}
                   onChange={(e) =>
@@ -450,6 +531,11 @@ const carregarSessoes = async (episodioId) => {
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Notas adicionais, lesões, alergias, etc."
                 />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {formData.observacoes || "Sem nome"}
+                      </p>
+                    )}
               </section>
 
               {/* Botões */}
@@ -520,7 +606,8 @@ const carregarSessoes = async (episodioId) => {
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
-                            {ep.diagnosticoFuncional || "Sem diagnóstico definido"}
+                            {ep.diagnosticoFuncional ||
+                              "Sem diagnóstico definido"}
                           </p>
                           <p className="text-xs text-gray-500">
                             Início: {ep.dataInicio || "-"}{" "}
@@ -536,51 +623,71 @@ const carregarSessoes = async (episodioId) => {
                         <div className="flex items-center gap-2">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                              ep.estado === "ativo" 
+                              ep.estado === "ativo"
                                 ? "bg-red-100 text-red-700"
-                                : "bg-emerald-100 text-emerald-700" 
+                                : "bg-emerald-100 text-emerald-700"
                             }`}
                           >
                             {ep.estado === "ativo" ? "Ativo" : "Alta"}
-
-     
                           </span>
 
-                                                 {ep.estado === "ativo" && (<button
-  type="button"
-  onClick={async () => {
-    if (!window.confirm("Marcar este episódio como fechado (alta)?")) return;
-    try {
-      const ref = doc(db, "episodiosClinicos", ep.id);
-      await updateDoc(ref, {
-        estado: "alta",
-        dataAlta: new Date().toISOString().slice(0, 10), // AAAA-MM-DD
-      });
-      // refresh lista episódios
-      const qEpis = query(
-        collection(db, "episodiosClinicos"),
-        where("atletaId", "==", id),
-        orderBy("dataInicio", "desc")
-      );
-      const snap = await getDocs(qEpis);
-      setEpisodios(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error("Erro ao fechar episódio:", err);
-      alert("Erro ao fechar episódio clínico");
-    }
-  }}
-  className="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-700 hover:bg-red-50"
->
-  Fechar episódio
-</button>
-)}
+                          {ep.estado === "ativo" && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (
+                                  !window.confirm(
+                                    "Marcar este episódio como fechado (alta)?",
+                                  )
+                                )
+                                  return;
+                                try {
+                                  const ref = doc(
+                                    db,
+                                    "episodiosClinicos",
+                                    ep.id,
+                                  );
+                                  await updateDoc(ref, {
+                                    estado: "alta",
+                                    dataAlta: new Date()
+                                      .toISOString()
+                                      .slice(0, 10), // AAAA-MM-DD
+                                  });
+                                  // refresh lista episódios
+                                  const qEpis = query(
+                                    collection(db, "episodiosClinicos"),
+                                    where("atletaId", "==", id),
+                                    orderBy("dataInicio", "desc"),
+                                  );
+                                  const snap = await getDocs(qEpis);
+                                  setEpisodios(
+                                    snap.docs.map((d) => ({
+                                      id: d.id,
+                                      ...d.data(),
+                                    })),
+                                  );
+                                } catch (err) {
+                                  console.error(
+                                    "Erro ao fechar episódio:",
+                                    err,
+                                  );
+                                  alert("Erro ao fechar episódio clínico");
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-700 hover:bg-red-50"
+                            >
+                              Fechar episódio
+                            </button>
+                          )}
 
                           <button
                             type="button"
                             onClick={() => carregarSessoes(ep.id)}
                             className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
                           >
-                            {episodioAtivo === ep.id ? "Esconder sessões" : "Ver sessões"}
+                            {episodioAtivo === ep.id
+                              ? "Esconder sessões"
+                              : "Ver sessões"}
                           </button>
 
                           <button
@@ -783,11 +890,11 @@ const carregarSessoes = async (episodioId) => {
                             const qEpis = query(
                               collection(db, "episodiosClinicos"),
                               where("atletaId", "==", id),
-                              orderBy("dataInicio", "desc")
+                              orderBy("dataInicio", "desc"),
                             );
                             const snap = await getDocs(qEpis);
                             setEpisodios(
-                              snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+                              snap.docs.map((d) => ({ id: d.id, ...d.data() })),
                             );
                           } catch (err) {
                             console.error("Erro ao criar episódio:", err);
@@ -933,7 +1040,7 @@ const carregarSessoes = async (episodioId) => {
                               db,
                               "episodiosClinicos",
                               episodioParaSessao,
-                              "sessoes"
+                              "sessoes",
                             );
                             await addDoc(refSessoes, {
                               ...sessaoForm,
@@ -967,73 +1074,72 @@ const carregarSessoes = async (episodioId) => {
             </div>
           )}
           {tab === "presencas" && (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
-    <div className="flex items-center justify-between mb-2">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">
-          Presenças em treinos
-        </h2>
-        <p className="text-sm text-gray-600">
-          Histórico de presenças, faltas e justificações desta atleta.
-        </p>
-      </div>
-    </div>
-
-    {loadingPresencas ? (
-      <div className="flex items-center gap-2 text-sm text-slate-500 py-6">
-        <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-        A carregar presenças...
-      </div>
-    ) : presencasAtleta.length === 0 ? (
-      <p className="text-sm text-slate-500">
-        Ainda não existem registos de presenças para esta atleta.
-      </p>
-    ) : (
-      <div className="space-y-2">
-        {presencasAtleta
-          .slice()
-          .sort((a, b) => (b.data || "").localeCompare(a.data || ""))
-          .map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 bg-slate-50"
-            >
-              <div>
-                <p className="text-sm font-medium text-slate-900">
-                  Treino: {p.treinoId}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {p.data
-                    ? new Date(p.data).toLocaleString("pt-PT", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })
-                    : "Sem data registada"}
-                </p>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Presenças em treinos
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Histórico de presenças, faltas e justificações desta atleta.
+                  </p>
+                </div>
               </div>
 
-              <span
-                className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                  p.estado === "presente"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : p.estado === "falta"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-amber-100 text-amber-800"
-                }`}
-              >
-                {p.estado === "presente"
-                  ? "Presente"
-                  : p.estado === "falta"
-                  ? "Falta"
-                  : "Justificada"}
-              </span>
-            </div>
-          ))}
-      </div>
-    )}
-  </div>
-)}
+              {loadingPresencas ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500 py-6">
+                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  A carregar presenças...
+                </div>
+              ) : presencasAtleta.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Ainda não existem registos de presenças para esta atleta.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {presencasAtleta
+                    .slice()
+                    .sort((a, b) => (b.data || "").localeCompare(a.data || ""))
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 bg-slate-50"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            Treino: {p.treinoId}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {p.data
+                              ? new Date(p.data).toLocaleString("pt-PT", {
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })
+                              : "Sem data registada"}
+                          </p>
+                        </div>
 
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                            p.estado === "presente"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : p.estado === "falta"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {p.estado === "presente"
+                            ? "Presente"
+                            : p.estado === "falta"
+                              ? "Falta"
+                              : "Justificada"}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
     </DashboardLayout>

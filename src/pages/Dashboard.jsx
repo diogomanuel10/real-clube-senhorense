@@ -215,7 +215,7 @@ export default function Dashboard({ user }) {
   
 
   return (
-    <DashboardLayout>
+    <DashboardLayout user={user}>
       <div className="max-w-7xl mx-auto">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

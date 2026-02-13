@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Plus,
   Trash2,
-  X
+  X,
+  Clock
 } from "lucide-react";
 import { gerarTreinosParaPlano } from "../utils/gerarTreinos";
 
@@ -38,13 +39,12 @@ const MESES = [
   "Dezembro",
 ];
 
-
 export default function Treinos({ user }) {
   const [treinadores, setTreinadores] = useState([]);
   const [treinos, setTreinos] = useState([]);
   const [escaloes, setEscaloes] = useState([]);
-  const [presencas, setPresencas] = useState([]);        // cache opcional
-const [savingPresenca, setSavingPresenca] = useState(false);
+  const [presencas, setPresencas] = useState([]);
+  const [savingPresenca, setSavingPresenca] = useState(false);
   const [treinoSelecionado, setTreinoSelecionado] = useState(null);
   const [atletasDoTreino, setAtletasDoTreino] = useState([]);
   const [planos, setPlanos] = useState([]);
@@ -53,11 +53,11 @@ const [savingPresenca, setSavingPresenca] = useState(false);
   const [showPlanosModal, setShowPlanosModal] = useState(false);
   const [showEditarTreinoModal, setShowEditarTreinoModal] = useState(false);
   const [formTreino, setFormTreino] = useState({
-  descricao: "",
-  planoTreino: "",
-  fundamento: "",
-  objetivo: "",
-});
+    descricao: "",
+    planoTreino: "",
+    fundamento: "",
+    objetivo: "",
+  });
   const [novoPlano, setNovoPlano] = useState({
     equipa: "",
     diasSemana: [],
@@ -77,120 +77,113 @@ const [savingPresenca, setSavingPresenca] = useState(false);
   }, []);
 
   const guardarDetalhesToreino = async (e) => {
-  e.preventDefault();
-  if (!treinoSelecionado) return;
+    e.preventDefault();
+    if (!treinoSelecionado) return;
 
-  try {
-    await setDoc(
-      doc(db, "treinos", treinoSelecionado.id),
-      formTreino,
-      { merge: true }
-    );
-
-    // Atualizar estado local
-    setTreinos((prev) =>
-      prev.map((t) =>
-        t.id === treinoSelecionado.id ? { ...t, ...formTreino } : t
-      )
-    );
-
-    setTreinoSelecionado({ ...treinoSelecionado, ...formTreino });
-    setShowEditarTreinoModal(false);
-    alert("Detalhes do treino guardados!");
-  } catch (err) {
-    console.error("Erro ao guardar detalhes:", err);
-    alert("Erro ao guardar: " + err.message);
-  }
-};
-
-const carregarTreinadores = async () => {
-  try {
-    const snap = await getDocs(collection(db, "treinadores"));
-    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setTreinadores(lista);
-  } catch (err) {
-    console.error("Erro ao carregar treinadores:", err);
-  }
-};
-
-
-  const handleClickTreino = async (treino) => {
-  setTreinoSelecionado(treino);
-
-  try {
-    // atletas do escalão
-    const atletasSnap = await getDocs(collection(db, "atletas"));
-    const todos = atletasSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const doEscalao = todos.filter((a) => a.equipa === treino.equipa);
-    setAtletasDoTreino(doEscalao);
-
-    // presenças deste treino
-    const q = query(
-      collection(db, "presencas"),
-      where("treinoId", "==", treino.id)
-    );
-    const presSnap = await getDocs(q);
-    const lista = presSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setPresencas(lista);
-  } catch (err) {
-    console.error("Erro ao carregar atletas/presenças:", err);
-  }
-};
-
-const marcarPresenca = async (atletaId, novoEstado) => {
-  if (!treinoSelecionado) return;
-  setSavingPresenca(true);
-
-  try {
-    const existente = presencas.find(
-      (p) => p.atletaId === atletaId && p.treinoId === treinoSelecionado.id
-    );
-
-    const agora = new Date(); // data/hora do clique
-
-    if (novoEstado === null) {
-      if (existente) {
-        await deleteDoc(doc(db, "presencas", existente.id));
-        setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
-      }
-    } else if (existente) {
-      // UPDATE: guarda último momento em que alteraste
+    try {
       await setDoc(
-        doc(db, "presencas", existente.id),
-        { estado: novoEstado, updatedAt: agora },
+        doc(db, "treinos", treinoSelecionado.id),
+        formTreino,
         { merge: true }
       );
-      setPresencas((prev) =>
-        prev.map((p) =>
-          p.id === existente.id ? { ...p, estado: novoEstado, updatedAt: agora } : p
+
+      setTreinos((prev) =>
+        prev.map((t) =>
+          t.id === treinoSelecionado.id ? { ...t, ...formTreino } : t
         )
       );
-    } else {
-      // CREATE: guarda quando foi registada
-      const ref = await addDoc(collection(db, "presencas"), {
-        treinoId: treinoSelecionado.id,
-        atletaId,
-        estado: novoEstado,
-        createdAt: agora,
-        updatedAt: agora,
-      });
-      setPresencas((prev) => [
-        ...prev,
-        {
-          id: ref.id,
+
+      setTreinoSelecionado({ ...treinoSelecionado, ...formTreino });
+      setShowEditarTreinoModal(false);
+      alert("Detalhes do treino guardados!");
+    } catch (err) {
+      console.error("Erro ao guardar detalhes:", err);
+      alert("Erro ao guardar: " + err.message);
+    }
+  };
+
+  const carregarTreinadores = async () => {
+    try {
+      const snap = await getDocs(collection(db, "treinadores"));
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setTreinadores(lista);
+    } catch (err) {
+      console.error("Erro ao carregar treinadores:", err);
+    }
+  };
+
+  const handleClickTreino = async (treino) => {
+    setTreinoSelecionado(treino);
+
+    try {
+      const atletasSnap = await getDocs(collection(db, "atletas"));
+      const todos = atletasSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const doEscalao = todos.filter((a) => a.equipa === treino.equipa);
+      setAtletasDoTreino(doEscalao);
+
+      const q = query(
+        collection(db, "presencas"),
+        where("treinoId", "==", treino.id)
+      );
+      const presSnap = await getDocs(q);
+      const lista = presSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setPresencas(lista);
+    } catch (err) {
+      console.error("Erro ao carregar atletas/presenças:", err);
+    }
+  };
+
+  const marcarPresenca = async (atletaId, novoEstado) => {
+    if (!treinoSelecionado) return;
+    setSavingPresenca(true);
+
+    try {
+      const existente = presencas.find(
+        (p) => p.atletaId === atletaId && p.treinoId === treinoSelecionado.id
+      );
+
+      const agora = new Date();
+
+      if (novoEstado === null) {
+        if (existente) {
+          await deleteDoc(doc(db, "presencas", existente.id));
+          setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
+        }
+      } else if (existente) {
+        await setDoc(
+          doc(db, "presencas", existente.id),
+          { estado: novoEstado, updatedAt: agora },
+          { merge: true }
+        );
+        setPresencas((prev) =>
+          prev.map((p) =>
+            p.id === existente.id ? { ...p, estado: novoEstado, updatedAt: agora } : p
+          )
+        );
+      } else {
+        const ref = await addDoc(collection(db, "presencas"), {
           treinoId: treinoSelecionado.id,
           atletaId,
           estado: novoEstado,
           createdAt: agora,
           updatedAt: agora,
-        },
-      ]);
+        });
+        setPresencas((prev) => [
+          ...prev,
+          {
+            id: ref.id,
+            treinoId: treinoSelecionado.id,
+            atletaId,
+            estado: novoEstado,
+            createdAt: agora,
+            updatedAt: agora,
+          },
+        ]);
+      }
+    } finally {
+      setSavingPresenca(false);
     }
-  } finally {
-    setSavingPresenca(false);
-  }
-};
-
+  };
 
   const carregarEscaloes = async () => {
     try {
@@ -308,8 +301,6 @@ const marcarPresenca = async (atletaId, novoEstado) => {
     { label: "Domingo", value: 0 },
   ];
 
-  // --------- Calendário simples (tailwind + grid) ---------
-
   const getDiasDoMes = (ano, mes) => {
     const primeiro = new Date(ano, mes, 1);
     const ultimo = new Date(ano, mes + 1, 0);
@@ -325,15 +316,14 @@ const marcarPresenca = async (atletaId, novoEstado) => {
   };
 
   const abrirModalEditarTreino = (treino) => {
-  setFormTreino({
-    descricao: treino.descricao || "",
-    planoTreino: treino.planoTreino || "",
-    fundamento: treino.fundamento || "",
-    objetivo: treino.objetivo || "",
-  });
-  setShowEditarTreinoModal(true);
-};
-
+    setFormTreino({
+      descricao: treino.descricao || "",
+      planoTreino: treino.planoTreino || "",
+      fundamento: treino.fundamento || "",
+      objetivo: treino.objetivo || "",
+    });
+    setShowEditarTreinoModal(true);
+  };
 
   const dias = getDiasDoMes(currentYear, currentMonth);
 
@@ -363,148 +353,192 @@ const marcarPresenca = async (atletaId, novoEstado) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="px-8 pt-8 pb-4 flex items-center justify-between">
+      {/* Header - Responsivo */}
+      <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
-          <CalendarDays className="w-7 h-7 text-blue-600" />
+          <CalendarDays className="w-6 h-6 md:w-7 md:h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Treinos</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900">Treinos</h1>
+            <p className="text-xs md:text-sm text-slate-500">
               Calendário anual de treinos e presenças
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <button
             onClick={handleGerirPlanos}
-            className="px-4 py-2 rounded-xl bg-white text-slate-800 text-sm font-medium flex items-center space-x-2 border border-slate-200 hover:bg-slate-50"
+            className="px-3 md:px-4 py-2 rounded-xl bg-white text-slate-800 text-xs md:text-sm font-medium flex items-center space-x-2 border border-slate-200 hover:bg-slate-50"
           >
             <Settings2 className="w-4 h-4" />
-            <span>Gerir planos de treino</span>
+            <span className="hidden sm:inline">Gerir planos</span>
+            <span className="sm:hidden">Planos</span>
           </button>
 
           <button
             onClick={handleGerarTreinosAno}
             disabled={gerando}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 md:px-4 py-2 rounded-xl bg-slate-900 text-white text-xs md:text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {gerando ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>A gerar…</span>
+                <span className="hidden sm:inline">A gerar…</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Gerar treinos do ano</span>
+                <span className="hidden sm:inline">Gerar treinos do ano</span>
+                <span className="sm:hidden">Gerar</span>
               </>
             )}
           </button>
 
           <button
             onClick={carregarTreinos}
-            className="px-3 py-2 rounded-xl bg-white text-slate-700 text-sm border border-slate-200 flex items-center space-x-2 hover:bg-slate-50"
+            className="px-3 py-2 rounded-xl bg-white text-slate-700 text-xs md:text-sm border border-slate-200 flex items-center space-x-2 hover:bg-slate-50"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Atualizar</span>
+            <span className="hidden md:inline">Atualizar</span>
           </button>
         </div>
       </header>
 
-      <main className="px-8 pb-8">
+      <main className="px-4 md:px-8 pb-8">
         {/* Navegação de mês */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => mudarMes(-1)}
-              className="p-2 rounded-full hover:bg-slate-200 text-slate-600"
+              className="p-2 rounded-full hover:bg-slate-200 text-slate-600 transition"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-base md:text-lg font-semibold text-slate-900">
               {MESES[currentMonth]} {currentYear}
             </h2>
             <button
               onClick={() => mudarMes(1)}
-              className="p-2 rounded-full hover:bg-slate-200 text-slate-600"
+              className="p-2 rounded-full hover:bg-slate-200 text-slate-600 transition"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Calendário */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2">
-          <div className="grid grid-cols-7 text-xs font-medium text-slate-500 mb-2">
-            <div className="text-center">Seg</div>
-            <div className="text-center">Ter</div>
-            <div className="text-center">Qua</div>
-            <div className="text-center">Qui</div>
-            <div className="text-center">Sex</div>
-            <div className="text-center">Sáb</div>
-            <div className="text-center">Dom</div>
+        {/* Calendário Modernizado */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+          {/* Header dos dias da semana */}
+          <div className="grid grid-cols-7 bg-gradient-to-r from-[#0b1635] to-[#152452] text-white">
+            {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((dia, idx) => (
+              <div
+                key={idx}
+                className="text-center py-2 md:py-3 text-[10px] md:text-xs font-semibold uppercase tracking-wider border-r border-white/10 last:border-r-0"
+              >
+                {dia}
+              </div>
+            ))}
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="h-10 w-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center justify-center py-20 md:py-32">
+              <div className="text-center">
+                <div className="h-10 w-10 md:h-12 md:w-12 border-3 border-[#f5c623] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-xs md:text-sm text-slate-500">A carregar treinos...</p>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-7 gap-1 text-xs">
+            <div className="grid grid-cols-7">
               {dias.map((date, idx) => {
                 if (!date) {
                   return (
-                    <div key={idx} className="h-32 rounded-lg bg-transparent" />
+                    <div
+                      key={idx}
+                      className="aspect-square md:min-h-[160px] bg-slate-50/50 border-r border-b border-slate-100"
+                    />
                   );
                 }
 
                 const dia = date.getDate();
-                const isHoje =
-                  date.toDateString() === new Date().toDateString();
+                const isHoje = date.toDateString() === new Date().toDateString();
                 const treinosDia = treinosPorDia[dia] || [];
+                const temTreinos = treinosDia.length > 0;
 
                 return (
                   <div
                     key={idx}
-                    className={`min-h-[140px] max-h-[140px] border rounded-lg px-1.5 py-1.5 flex flex-col ${
-                      isHoje
-                        ? "border-blue-400 bg-blue-50/40"
-                        : "border-slate-100 bg-slate-50/40"
-                    }`}
+                    className={`
+                      min-h-[120px] md:min-h-[160px] border-r border-b border-slate-100 last:border-r-0
+                      transition-all duration-200 hover:bg-slate-50
+                      ${isHoje ? "bg-blue-50/50" : "bg-white"}
+                    `}
                   >
-                    <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                      <span className="text-[11px] font-semibold text-slate-700">
+                    {/* Header do dia */}
+                    <div className={`
+                      p-1.5 md:p-2 flex items-center justify-between border-b
+                      ${isHoje ? "bg-[#f5c623] border-[#f5c623]" : "bg-slate-50 border-slate-100"}
+                    `}>
+                      <span className={`
+                        text-xs md:text-sm font-bold
+                        ${isHoje ? "text-[#0b1635]" : "text-slate-700"}
+                      `}>
                         {dia}
                       </span>
-                      {treinosDia.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                      {temTreinos && (
+                        <div className={`
+                          flex items-center justify-center w-4 h-4 md:w-5 md:h-5 rounded-full text-[9px] md:text-[10px] font-bold
+                          ${isHoje ? "bg-[#0b1635] text-white" : "bg-emerald-500 text-white"}
+                        `}>
                           {treinosDia.length}
-                        </span>
+                        </div>
                       )}
                     </div>
 
-                    <div className="space-y-1 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-                      {treinosDia.map((t) => {
-                        const esc = escaloes.find((e) => e.nome === t.equipa);
-                        const cor = esc?.cor || "from-slate-200 to-slate-300";
+                    {/* Treinos do dia */}
+                    <div className="p-1.5 md:p-2 space-y-1 md:space-y-1.5 max-h-[100px] md:max-h-[120px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                      {treinosDia.length === 0 ? (
+                        <div className="flex items-center justify-center h-16 md:h-20">
+                          <span className="text-[9px] md:text-[10px] text-slate-400">Sem treinos</span>
+                        </div>
+                      ) : (
+                        treinosDia.map((t) => {
+                          const esc = escaloes.find((e) => e.nome === t.equipa);
+                          const cor = esc?.cor || "from-slate-200 to-slate-300";
 
-                        return (
-                          <button
-                            key={t.id}
-                            onClick={() => handleClickTreino(t)}
-                            title={`${t.equipa} · ${t.horaInicio}–${t.horaFim}`}
-                            className={`w-full text-left text-[10px] px-1.5 py-1 rounded bg-gradient-to-r ${cor} shadow-sm border border-slate-300 transition hover:scale-[1.02] cursor-pointer`}
-                          >
-                            <div className="font-bold text-slate-900 truncate leading-tight">
-                              {t.equipa}
-                            </div>
-                            <div className="text-[9px] text-slate-800 font-medium">
-                              {t.horaInicio}–{t.horaFim}
-                            </div>
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => handleClickTreino(t)}
+                              className={`
+                                w-full text-left p-1.5 md:p-2 rounded-lg
+                                bg-gradient-to-br ${cor}
+                                border border-slate-300/50 shadow-sm
+                                transition-all duration-200
+                                hover:scale-[1.02] hover:shadow-md
+                                cursor-pointer group
+                              `}
+                            >
+                              <div className="flex items-center justify-between mb-0.5 md:mb-1">
+                                <span className="text-[9px] md:text-[11px] font-bold text-slate-900 truncate pr-1">
+                                  {t.equipa}
+                                </span>
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-slate-900 rounded-full" />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 text-[8px] md:text-[9px] text-slate-700 font-medium">
+                                <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span>{t.horaInicio}–{t.horaFim}</span>
+                              </div>
+                              {t.local && (
+                                <div className="mt-0.5 text-[7px] md:text-[8px] text-slate-600 truncate">
+                                  📍 {t.local}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 );

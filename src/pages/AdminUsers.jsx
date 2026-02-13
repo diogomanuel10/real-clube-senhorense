@@ -13,8 +13,10 @@ export default function AdminUsers({ user }) {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
   const [formRole, setFormRole] = useState("");
-  const [formEquipas, setFormEquipas] = useState("");
+  const [formEquipas, setFormEquipas] = useState([]); // passa a array
   const [saving, setSaving] = useState(false);
+  const [escaloes, setEscaloes] = useState([]);
+
 
   const loadUsers = async () => {
     setLoading(true);
@@ -32,37 +34,45 @@ export default function AdminUsers({ user }) {
 
   useEffect(() => {
     loadUsers();
-  }, []);
-
-  const openEdit = (u) => {
-    setEditingUser(u);
-    setFormRole(u.role || "");
-    setFormEquipas((u.equipas || []).join(", "));
-  };
-
-  const handleSave = async () => {
-    if (!editingUser) return;
-    setSaving(true);
+    const loadEscaloes = async () => {
     try {
-      const ref = doc(db, "utilizadores", editingUser.id);
-      await updateDoc(ref, {
-        role: formRole || null,
-        equipas:
-          formEquipas.trim() === ""
-            ? []
-            : formEquipas.split(",").map((e) => e.trim()),
-      });
-      setEditingUser(null);
-      setFormRole("");
-      setFormEquipas("");
-      await loadUsers();
+      const snap = await getDocs(collection(db, "escaloes"));
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setEscaloes(lista);
     } catch (err) {
-      console.error("Erro ao guardar utilizador:", err);
-      alert("Erro ao guardar utilizador.");
-    } finally {
-      setSaving(false);
+      console.error("Erro ao carregar escalões:", err);
     }
   };
+
+  loadEscaloes();
+  }, []);
+
+const openEdit = (u) => {
+  setEditingUser(u);
+  setFormRole(u.role || "");
+  setFormEquipas(u.equipas || []); // array vindo do Firestore
+};
+
+ const handleSave = async () => {
+  if (!editingUser) return;
+  setSaving(true);
+  try {
+    const ref = doc(db, "utilizadores", editingUser.id);
+    await updateDoc(ref, {
+      role: formRole || null,
+      equipas: formEquipas, // já é array
+    });
+    setEditingUser(null);
+    setFormRole("");
+    setFormEquipas([]);
+    await loadUsers();
+  } catch (err) {
+    console.error("Erro ao guardar utilizador:", err);
+    alert("Erro ao guardar utilizador.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <DashboardLayout user={user}>
@@ -194,16 +204,44 @@ export default function AdminUsers({ user }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Equipas que pode gerir (separadas por vírgulas)
-                  </label>
-                  <input
-                    type="text"
-                    value={formEquipas}
-                    onChange={(e) => setFormEquipas(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                    placeholder="Ex: Seniores F, Sub-18 F"
-                  />
+                  <div>
+  <label className="block text-sm font-medium text-slate-700 mb-1">
+    Equipas que pode gerir
+  </label>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2">
+    {escaloes.map((esc) => {
+      const nomeEquipa = esc.nome || esc.id; // ajusta ao teu modelo
+      const selecionado = formEquipas.includes(nomeEquipa);
+
+      return (
+        <label
+          key={esc.id}
+          className="flex items-center gap-2 text-xs text-slate-700"
+        >
+          <input
+            type="checkbox"
+            checked={selecionado}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setFormEquipas((prev) =>
+                  Array.from(new Set([...prev, nomeEquipa]))
+                );
+              } else {
+                setFormEquipas((prev) =>
+                  prev.filter((eq) => eq !== nomeEquipa)
+                );
+              }
+            }}
+            className="rounded border-slate-300 text-[#0b1635] focus:ring-[#f5c623]"
+          />
+          {nomeEquipa}
+        </label>
+      );
+    })}
+  </div>
+</div>
+
                 </div>
               </div>
 

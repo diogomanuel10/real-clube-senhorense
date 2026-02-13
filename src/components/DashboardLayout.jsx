@@ -1,44 +1,76 @@
 // DashboardLayout.jsx
-import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus,ClipboardCheck, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../utils/firebase";
+import { signOut } from "firebase/auth";
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/" },
-  { id: "atletas", label: "Atletas", icon: Users, path: "/atletas" },
-  { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes" },
-  { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos" },
-  { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes" },
-  { id: "treinadores", label: "Treinadores", icon: UserCog, path: "/treinadores" },
-  { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas" }, 
+  { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/", roles: ["admin", "treinador","coordenador","fisio"] },
+  { id: "atletas", label: "Atletas", icon: Users, path: "/atletas", roles: ["admin", "treinador","coordenador","fisio"] },
+  { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes", roles: ["admin", "treinador","coordenador"] },
+  { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador","coordenador","fisio"] },
+  { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes", roles: ["admin", "treinador","coordenador"] },
+  { id: "treinadores", label: "Treinadores", icon: UserCog, path: "/treinadores", roles: ["admin","coordenador"] },
+  { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador","coordenador"] },
+  { id: "admin-users", label: "Utilizadores", icon: Shield, path: "/admin/utilizadores", roles: ["admin","coordenador"] },
 ];
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children, user }) {
   const navigate = useNavigate();
-  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  console.log("DashboardLayout user:", user);
+  // Determinar role do user (adapta conforme a tua estrutura no Firebase)
+  const userRole = user?.role || user?.customClaims?.role || "viewer";
 
-  const handleLogout = () => {
-    // limpa o que estiveres a usar para sessão
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    // redireciona para a página de login ou home
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
   };
+
+  // Filtrar items baseado no role do user
+  const visibleNavItems = navItems.filter(item => 
+    item.roles.includes(userRole)
+  );
 
   return (
     <div className="flex min-h-screen bg-[#f3f4f6]">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#0b1635] text-white rounded-lg shadow-lg"
+      >
+        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
       <aside
-        className="
+        className={`
+          fixed lg:static inset-y-0 left-0 z-40
           group flex flex-col
           bg-[#0b1635] text-white
-          w-20 hover:w-64
-          transition-[width] duration-300
+          w-64 lg:w-20 lg:hover:w-64
+          transition-all duration-300
           shadow-xl
-        "
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
       >
         {/* Logo + lema */}
         <div className="flex items-center gap-3 mt-6 mb-8 px-4">
-          {/* LOGO – SEM group-hover (fica sempre visível) */}
           <div className="h-10 w-10 rounded-full border border-[#f5c623] bg-white flex items-center justify-center overflow-hidden shrink-0">
             <img
               src="/logo.png"
@@ -47,22 +79,25 @@ export default function DashboardLayout({ children }) {
             />
           </div>
 
-          {/* Lema – só aparece quando o sidebar está aberto */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Lema – visível em mobile, hover em desktop */}
+          <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
             <p className="text-[10px] tracking-[0.25em] uppercase text-[#f5c623] whitespace-nowrap">
               vontade de vencer
             </p>
           </div>
         </div>
 
-        {/* Navegação */}
+        {/* Navegação - só mostra items permitidos para o role */}
         <nav className="flex-1 space-y-1 px-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  navigate(item.path);
+                  setSidebarOpen(false); // Fecha sidebar em mobile
+                }}
                 className="
                   flex items-center gap-3
                   w-full px-3 py-2
@@ -73,11 +108,8 @@ export default function DashboardLayout({ children }) {
                   transition-colors
                 "
               >
-                {/* ÍCONE – SEM group-hover, sempre visível */}
                 <Icon className="h-5 w-5 flex-shrink-0" />
-
-                {/* TEXTO – aparece só quando hover no sidebar */}
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                <span className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                   {item.label}
                 </span>
               </button>
@@ -85,38 +117,50 @@ export default function DashboardLayout({ children }) {
           })}
         </nav>
 
-        {/* Rodapé – só com sidebar aberto */}
-        <div className="mb-4 text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity px-4">
+        {/* User info e role - só sidebar aberto */}
+        <div className="px-4 py-3 border-t border-white/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+          <p className="text-xs text-slate-300 truncate">{user?.email}</p>
+          <p className="text-[10px] text-[#f5c623] uppercase">{userRole}</p>
+        </div>
+
+        {/* Rodapé */}
+        <div className="mb-4 text-[10px] text-slate-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity px-4">
           © 2026 Real Clube Senhorense
         </div>
       </aside>
 
       {/* CONTEÚDO + HEADER */}
-      <div className="flex-1 flex flex-col">
-        <header className="h-16 bg-[#0b1635] text-white flex items-center justify-between px-8 shadow-md">
-          <div>
-            <h1 className="text-lg font-semibold tracking-wide">
+      <div className="flex-1 flex flex-col w-full lg:w-auto">
+        <header className="h-16 bg-[#0b1635] text-white flex items-center justify-between px-4 md:px-8 shadow-md">
+          <div className="ml-12 lg:ml-0">
+            <h1 className="text-sm md:text-lg font-semibold tracking-wide">
               Real Clube Senhorense
             </h1>
-            <p className="text-xs text-slate-300">
+            <p className="text-[10px] md:text-xs text-slate-300">
               Vontade de vencer · Época 25/26
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Badge do role - só desktop */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs">
+              <Shield className="w-3 h-3" />
+              <span className="capitalize">{userRole}</span>
+            </div>
+
             <button
-      onClick={handleLogout}
-      className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs hover:bg-red-500 hover:border-red-400 hover:text-white transition-colors"
-    >
-      <LogOut className="w-4 h-4" />
-      <span className="hidden sm:inline"></span>
-    </button>
-        
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs hover:bg-red-500 hover:border-red-400 hover:text-white transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
           </div>
         </header>
 
-        <main className="flex-1 px-8 py-8">{children}</main>
+        <main className="flex-1 px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 overflow-x-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );

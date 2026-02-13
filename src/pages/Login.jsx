@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,38 +23,41 @@ export default function Login() {
     { value: 'coordenador', label: 'Coordenador' }
   ];
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      let userCredential;
-      if (isLogin) {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        await addDoc(collection(db, 'utilizadores'), {
-          uid: userCredential.user.uid,
-          email: email,
-          nome: nome,
-          idade: idade || null,
-          telemovel: telemovel || null,
-          perfil: perfil,
-          dataCriacao: new Date().toISOString(),
-          ativo: true
-        });
-        
-        alert(`Conta criada! Perfil: ${perfis.find(p => p.value === perfil).label}`);
-      }
-      navigate('/');
-    } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro: ' + error.message);
-    } finally {
-      setLoading(false);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    let userCredential;
+    if (isLogin) {
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
+    } else {
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // ✅ CORREÇÃO: usar setDoc() com o UID como ID do documento
+      await setDoc(doc(db, 'utilizadores', userCredential.user.uid), {
+        email: email,
+        nome: nome,
+        idade: idade || null,
+        telemovel: telemovel || null,
+        perfil: perfil,
+        role: perfil, // Adicionar role também
+        dataCriacao: new Date().toISOString(),
+        ativo: true
+        // Não precisas do campo "uid" porque o ID do documento já é o UID
+      });
+      
+      alert(`Conta criada! Perfil: ${perfis.find(p => p.value === perfil).label}`);
     }
-  };
+    navigate('/');
+  } catch (error) {
+    console.error('Erro:', error);
+    alert('Erro: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 p-4">
