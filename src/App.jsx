@@ -1,23 +1,28 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './utils/firebase';
-import Dashboard from './pages/Dashboard';
-import DashboardLayout from './components/DashboardLayout';
-import Atletas from './pages/Atletas';
+import { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./utils/firebase";
+import Dashboard from "./pages/Dashboard";
+import DashboardLayout from "./components/DashboardLayout";
+import Atletas from "./pages/Atletas";
 import Captacoes from "./pages/Captacoes";
-import Login from './pages/Login';
-import Treinos from './pages/Treinos';
-import Escaloes from './pages/Escaloes';
+import Login from "./pages/Login";
+import Treinos from "./pages/Treinos";
+import Escaloes from "./pages/Escaloes";
 import Treinadores from "./pages/Treinadores";
 import Presencas from "./pages/Presencas";
 import AtletaPerfil from "./pages/AtletaPerfil";
 import AdminUsers from "./pages/AdminUsers";
+import Comunicados from './pages/Comunicados';
+import Equipamentos from "./pages/Equipamentos"; // <-- ADICIONAR ISTO
 
-import './styles/globals.css';
-
-
+import "./styles/globals.css";
 
 function AppContent({ user }) {
   return (
@@ -35,18 +40,11 @@ function AppContent({ user }) {
             }
           />
 
-          <Route
-            path="/atletas/:id"
-            element={<AtletaPerfil user={user} />}
-          />
+          <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
 
           <Route
             path="/admin/utilizadores"
-            element={
-            
-                <AdminUsers user={user} />
-            
-            }
+            element={<AdminUsers user={user} />}
           />
 
           <Route
@@ -93,6 +91,25 @@ function AppContent({ user }) {
               </DashboardLayout>
             }
           />
+
+          {/* ADICIONAR ESTA ROTA */}
+          <Route
+            path="/equipamentos"
+            element={
+              <DashboardLayout user={user}>
+                <Equipamentos user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/comunicados"
+            element={
+              <DashboardLayout user={user}>
+                <Comunicados user={user} />
+              </DashboardLayout>
+            }
+          />
         </>
       ) : (
         <Route path="/" element={<Login />} />
@@ -127,10 +144,10 @@ function App() {
             setUser(userToSet);
           } else {
             setUser({
-                ...currentUser,
-                ...data,            // <-- isto traz "equipas", idade, etc.
-                role: roleFromDb,
-                displayName: data.nome || currentUser.displayName,
+              ...currentUser,
+              ...data,
+              role: roleFromDb,
+              displayName: data.nome || currentUser.displayName,
             });
           }
         } catch (err) {
@@ -162,11 +179,9 @@ function App() {
 
   return (
     <Router>
-      {/* Só uma instância de AppContent, recebe sempre o state atual */}
       <AppContent user={user} />
     </Router>
   );
 }
-
 
 export default App;

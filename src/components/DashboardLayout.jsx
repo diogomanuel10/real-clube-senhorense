@@ -1,6 +1,6 @@
 // DashboardLayout.jsx
 import { useState } from "react";
-import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
@@ -14,6 +14,8 @@ const navItems = [
   { id: "treinadores", label: "Treinadores", icon: UserCog, path: "/treinadores", roles: ["admin","coordenador"] },
   { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador","coordenador"] },
   { id: "admin-users", label: "Utilizadores", icon: Shield, path: "/admin/utilizadores", roles: ["admin","coordenador"] },
+  { id: "equipamentos", label: "Equipamentos", icon: Users2, path: "/equipamentos", roles: ["admin","coordenador"] },
+  { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin","treinador","coordenador"] },
 ];
 
 export default function DashboardLayout({ children, user }) {
