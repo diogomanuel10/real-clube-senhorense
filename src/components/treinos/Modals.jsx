@@ -1,5 +1,5 @@
 import { X, Settings2, Plus, Trash2, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   addDoc,
   deleteDoc,
@@ -279,9 +279,7 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
   const [presencas, setPresencas] = useState([]);
   const [savingPresenca, setSavingPresenca] = useState(false);
 
-  useState(() => {
-    carregarAtletas();
-  }, [treino]);
+
 
   const carregarAtletas = async () => {
     try {
@@ -353,6 +351,10 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
       setSavingPresenca(false);
     }
   };
+
+    useEffect(() => {
+    carregarAtletas();
+  }, [treino]);
 
   return (
     <div

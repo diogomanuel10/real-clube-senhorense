@@ -15,9 +15,9 @@ import Captacoes from "./pages/Captacoes";
 import Login from "./pages/Login";
 import Treinos from "./pages/Treinos";
 import Escaloes from "./pages/Escaloes";
-import Treinadores from "./pages/Treinadores";
 import Presencas from "./pages/Presencas";
 import AtletaPerfil from "./pages/AtletaPerfil";
+import Quotas from './pages/Quotas';
 import AdminUsers from "./pages/AdminUsers";
 import Comunicados from './pages/Comunicados';
 import Equipamentos from "./pages/Equipamentos"; // <-- ADICIONAR ISTO
@@ -47,15 +47,11 @@ function AppContent({ user }) {
             element={<AdminUsers user={user} />}
           />
 
-          <Route
-            path="/treinadores"
-            element={
-              <DashboardLayout user={user}>
-                <Treinadores user={user} />
-              </DashboardLayout>
-            }
-          />
 
+<Route path="quotas" element={
+  <DashboardLayout user={user}>
+                <Quotas user={user} />
+              </DashboardLayout>} />
           <Route
             path="/escaloes"
             element={
@@ -74,6 +70,14 @@ function AppContent({ user }) {
             }
           />
 
+ <Route
+            path="/admin/utilizadores"
+            element={
+              <DashboardLayout user={user}>
+                <AdminUsers user={user} />
+              </DashboardLayout>
+            }
+          />
           <Route
             path="/presencas"
             element={

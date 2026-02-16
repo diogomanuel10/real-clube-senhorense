@@ -1,22 +1,34 @@
 // DashboardLayout.jsx
 import { useState } from "react";
 import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone } from "lucide-react";
+import { FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
 import { auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
-
 const navItems = [
+  // 1. Visão geral
   { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/", roles: ["admin", "treinador","coordenador","fisio"] },
+  
+  // 2. Gestão de pessoas (núcleo principal)
   { id: "atletas", label: "Atletas", icon: Users, path: "/atletas", roles: ["admin", "treinador","coordenador","fisio"] },
   { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes", roles: ["admin", "treinador","coordenador"] },
-  { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador","coordenador","fisio"] },
   { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes", roles: ["admin", "treinador","coordenador"] },
-  { id: "treinadores", label: "Treinadores", icon: UserCog, path: "/treinadores", roles: ["admin","coordenador"] },
+  
+  // 3. Atividades diárias (uso frequente)
+  { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador","coordenador","fisio"] },
   { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador","coordenador"] },
-  { id: "admin-users", label: "Utilizadores", icon: Shield, path: "/admin/utilizadores", roles: ["admin","coordenador"] },
-  { id: "equipamentos", label: "Equipamentos", icon: Users2, path: "/equipamentos", roles: ["admin","coordenador"] },
+  
+  // 4. Comunicação
   { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin","treinador","coordenador"] },
+  
+  // 5. Gestão administrativa (menos frequente)
+  { id: "equipamentos", label: "Equipamentos", icon: Users2, path: "/equipamentos", roles: ["admin","coordenador"] },
+  { id: "quotas", label: "Quotas", icon: FaMoneyBillWave, path: "/quotas", roles: ["admin","coordenador"] },
+  
+  // 6. Administração (última opção)
+  { id: "admin-users", label: "Utilizadores", icon: Shield, path: "/admin/utilizadores", roles: ["admin","coordenador"] },
 ];
+
 
 export default function DashboardLayout({ children, user }) {
   const navigate = useNavigate();

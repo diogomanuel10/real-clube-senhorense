@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,65 +10,51 @@ export default function Login() {
   const [nome, setNome] = useState('');
   const [idade, setIdade] = useState('');
   const [telemovel, setTelemovel] = useState('');
-  const [perfil, setPerfil] = useState('atleta');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const perfis = [
-    { value: 'pai', label: 'Pai/Encarregado' },
-    { value: 'treinador', label: 'Treinador' },
-    { value: 'atleta', label: 'Atleta' },
-    { value: 'diretor', label: 'Diretor' },
-    { value: 'coordenador', label: 'Coordenador' }
-  ];
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    let userCredential;
-    if (isLogin) {
-      userCredential = await signInWithEmailAndPassword(auth, email, password);
-    } else {
-      userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // ✅ CORREÇÃO: usar setDoc() com o UID como ID do documento
-      await setDoc(doc(db, 'utilizadores', userCredential.user.uid), {
-        email: email,
-        nome: nome,
-        idade: idade || null,
-        telemovel: telemovel || null,
-        perfil: perfil,
-        role: perfil, // Adicionar role também
-        dataCriacao: new Date().toISOString(),
-        ativo: true
-        // Não precisas do campo "uid" porque o ID do documento já é o UID
-      });
-      
-      alert(`Conta criada! Perfil: ${perfis.find(p => p.value === perfil).label}`);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      let userCredential;
+      if (isLogin) {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Criar utilizador sem role definida (será atribuída pelo admin)
+        await setDoc(doc(db, 'utilizadores', userCredential.user.uid), {
+          email: email,
+          nome: nome,
+          idade: idade || null,
+          telemovel: telemovel || null,
+          role: 'pendente', // Role pendente até aprovação do admin
+          dataCriacao: new Date().toISOString(),
+          ativo: false // Inativo até ser aprovado pelo admin
+        });
+        
+        alert('Conta criada! Aguarda aprovação do administrador.');
+      }
+      navigate('/');
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-    navigate('/');
-  } catch (error) {
-    console.error('Erro:', error);
-    alert('Erro: ' + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 p-4">
-      {/* ✅ ALTERAÇÃO 1: max-h-[90vh] overflow-y-auto */}
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6 max-h-[90vh] bg-[#0b1635] overflow-y-auto">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6 max-h-[90vh] overflow-y-auto">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Real Clube Senhorense</h1>
           <p className="text-gray-600">{isLogin ? 'Iniciar sessão' : 'Registo'}</p>
         </div>
 
-        {/* ✅ ALTERAÇÃO 2: space-y-4 (reduzido de 6) */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
@@ -107,22 +93,6 @@ const handleSubmit = async (e) => {
                     placeholder="916 123 456"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Perfil *</label>
-                <select
-                  value={perfil}
-                  onChange={(e) => setPerfil(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  {perfis.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
               </div>
             </>
           )}
@@ -168,7 +138,6 @@ const handleSubmit = async (e) => {
           </button>
         </form>
 
-        {/* ✅ ALTERAÇÃO 3: space-y-3 pt-4 (reduzido) */}
         <div className="text-center space-y-3 pt-4 border-t border-gray-200">
           <button
             type="button"
@@ -178,12 +147,13 @@ const handleSubmit = async (e) => {
             {isLogin ? 'Criar nova conta' : 'Já tenho conta'}
           </button>
           
-          <div className="text-xs text-gray-500 space-y-1">
-            
-            {!isLogin && (
-              <p className="text-blue-600 font-medium">Todos os campos * são obrigatórios</p>
-            )}
-          </div>
+          {!isLogin && (
+            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+              <p className="text-blue-600 font-medium">
+                ℹ️ Após o registo, a tua conta ficará pendente até ser aprovada por um administrador.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
