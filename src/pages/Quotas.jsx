@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaDownload } from 'react-icons/fa';
 import QuotasStats from '../components/quotas/QuotasStats';
+import { usePermissions } from '../hooks/usePermissions';
 import QuotasFiltros from '../components/quotas/QuotasFiltros';
 import QuotasTabela from '../components/quotas/QuotasTabela';
 import ModalNovaQuota from '../components/quotas/ModalNovaQuota';
@@ -21,7 +22,7 @@ import {
   filtrarQuotas, 
   exportarParaCSV,
   obterEquipasUnicas
-} from '../utils/QuotasUtils';
+} from '../utils/quotasUtils';
 
 export default function Quotas() {
   const [atletas, setAtletas] = useState([]);

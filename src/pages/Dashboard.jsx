@@ -1,50 +1,67 @@
 import { useDashboard } from '../hooks/useDashboard';
 import WelcomeHeader from '../components/dashboard/WelcomeHeader';
+import DashboardTreinador from './DashboardTreinador';
 import StatsCards from '../components/dashboard/StatsCard';
 import TreinosHoje from '../components/dashboard/TreinosHoje';
+import { usePermissions } from '../hooks/usePermissions';
 import NotificacoesWidget from '../components/dashboard/NotificacoesWidget';
 import ComunicadosWidget from '../components/dashboard/ComunicadosWidget'; // <-- ADICIONAR
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function Dashboard({ user }) {
-  const { stats, treinos, escaloes, comunicados, loading } = useDashboard(); // <-- ADICIONAR comunicados
+const permissions = usePermissions(user);
+  const { stats, treinos, escaloes, comunicados, loading } = useDashboard();
+  const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa');
+  const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
+  const comunicadosFiltrados = comunicados.filter(c => {
+    if (permissions.isAdmin || permissions.isDirecao) return true;
+    if (permissions.isTreinador && c.destinatarios) {
+      if (c.destinatarios.includes('todos')) return true;
+      return c.destinatarios.some(dest => permissions.equipas.includes(dest));
+    }
+    return true;
+  });
 
-  return (
-    <DashboardLayout user={user}>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="p-4 md:p-8">
-        {/* Welcome Header */}
-        <WelcomeHeader user={user} />
-
-        {/* Stats Cards */}
-        <StatsCards stats={stats} loading={loading} />
-
-        {/* Grid Principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Coluna Principal (2/3) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Treinos de Hoje */}
-            <TreinosHoje 
-              treinos={treinos} 
-              escaloes={escaloes} 
-              loading={loading} 
-            />
-
-            {/* Comunicados - ADICIONAR AQUI */}
-            <ComunicadosWidget 
-              comunicados={comunicados} 
-              loading={loading} 
-            />
-          </div>
-
-          {/* Coluna Lateral (1/3) */}
-          <div className="space-y-6">
-            {/* Notificações */}
-            <NotificacoesWidget user={user} />
+ // Enquanto carrega permissões
+  if (permissions.loading) {
+    return (
+      <DashboardLayout user={user}>
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">A carregar dashboard...</p>
           </div>
         </div>
-      </div>
-    </div>
+      </DashboardLayout>
+    );
+  }
+   const statsAjustados = permissions.isTreinador ? {
+    ...stats,
+    totalAtletas: stats.totalAtletas, // isto vem do hook, já deve estar filtrado
+    totalEscaloes: permissions.equipas.length,
+  } : stats;
+  
+return (
+    <DashboardLayout user={user}>
+      {permissions.isTreinador ? (
+        <DashboardTreinador user={user} />
+      ) : permissions.isAdmin || permissions.isDirecao ? (
+        // Temporariamente usa o dashboard padrão
+        <div className="p-8">
+          <h1 className="text-2xl font-bold">Dashboard Direção/Admin</h1>
+          <p className="text-slate-600 mt-2">Em desenvolvimento...</p>
+        </div>
+      ) : permissions.isAtleta ? (
+        <div className="p-8">
+          <h1 className="text-2xl font-bold">Dashboard Atleta</h1>
+          <p className="text-slate-600 mt-2">Em desenvolvimento...</p>
+        </div>
+      ) : (
+        <div className="p-8">
+          <h1 className="text-2xl font-bold">Bem-vindo!</h1>
+          <p className="text-slate-600 mt-2">Dashboard genérico</p>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

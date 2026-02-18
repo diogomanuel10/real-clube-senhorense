@@ -3,11 +3,12 @@ import { CalendarDays, RefreshCw, Sparkles, Settings2 } from "lucide-react";
 import { useTreinos } from "../hooks/useTreinos";
 import { gerarTreinosParaPlano } from "../utils/gerarTreinos";
 import Calendario from "../components/treinos/Calendario";
+import { usePermissions } from '../hooks/usePermissions';
 import { ModalPlanos, ModalDetalhes, ModalEditarTreino } from "../components/treinos/Modals";
 
 export default function Treinos({ user }) {
   const { treinos, setTreinos, escaloes, planos, setPlanos, loading, recarregar } = useTreinos();
-  
+  const permissions = usePermissions(user);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [gerando, setGerando] = useState(false);
@@ -38,6 +39,10 @@ export default function Treinos({ user }) {
       setGerando(false);
     }
   };
+
+const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
+const planosFiltrados = permissions.filterByEquipa(planos, 'equipa'); // ✅
+const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
 
   const handleMudarMes = (novoAno, novoMes) => {
     setCurrentYear(novoAno);
@@ -126,8 +131,8 @@ export default function Treinos({ user }) {
         <Calendario
           ano={currentYear}
           mes={currentMonth}
-          treinos={treinos}
-          escaloes={escaloes}
+          treinos={treinosFiltrados}
+          escaloes={escaloesFiltrados}
           loading={loading}
           onMudarMes={handleMudarMes}
           onTreinoClick={handleTreinoClick}
@@ -137,8 +142,8 @@ export default function Treinos({ user }) {
       {/* Modals */}
       {showPlanosModal && (
         <ModalPlanos
-          escaloes={escaloes}
-          planos={planos}
+          escaloes={escaloesFiltrados}
+          planos={planosFiltrados}
           onClose={() => setShowPlanosModal(false)}
           onUpdate={() => {
             recarregar();

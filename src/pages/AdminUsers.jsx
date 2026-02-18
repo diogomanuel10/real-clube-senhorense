@@ -5,7 +5,7 @@ import DashboardLayout from "../components/DashboardLayout";
 import { Users, Shield, Edit3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const ROLES = ["admin", "treinador", "fisio", "staff"];
+const ROLES = ["admin", "treinador", "fisio", "direcao", "atleta"];
 
 export default function AdminUsers({ user }) {
   const navigate = useNavigate();

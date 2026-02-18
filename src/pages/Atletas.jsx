@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePermissions } from '../hooks/usePermissions';
 import {
   Users,
   Plus,
@@ -26,6 +27,7 @@ import Papa from "papaparse";
 
 export default function Atletas({ user }) {
   const isAdmin = user?.role === "admin" || user?.role === "direcao";
+  const permissions = usePermissions(user);
   const isTreinador = user?.role === "treinador";
   const equipasUser = Array.isArray(user?.equipas) ? user.equipas : [];
   const navigate = useNavigate();
@@ -91,18 +93,18 @@ export default function Atletas({ user }) {
       atleta.nome?.toLowerCase().includes(search.toLowerCase()) ||
       atleta.equipa?.toLowerCase().includes(search.toLowerCase());
 
-    // Se for admin/direção, aplica filtro manual (dropdown).
-    // Se for treinador, mostra apenas equipas atribuídas, ignorando dropdown.
-    const matchEscalao = isAdmin
-      ? filtroEscalao
-        ? atleta.equipa === filtroEscalao
-        : true
-      : isTreinador && equipasUser.length > 0
-        ? equipasUser.includes(atleta.equipa)
-        : true;
+    // Aplicar filtro de equipa do dropdown (para admin/direção)
+    const matchEscalao = filtroEscalao
+      ? atleta.equipa === filtroEscalao
+      : true;
 
-    return matchTexto && matchEscalao;
+    // Aplicar permissões
+    const matchPermissao = permissions.canViewEquipa(atleta.equipa);
+
+    return matchTexto && matchEscalao && matchPermissao;
   });
+
+  const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,7 +245,7 @@ export default function Atletas({ user }) {
           </div>
 
           <div className="flex items-center space-x-3">
-            
+
             <div>
               <input
                 id="import-csv-input"
@@ -303,7 +305,7 @@ export default function Atletas({ user }) {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Todos os escalões</option>
-                {escaloes.map((esc) => (
+                {escaloesFiltrados.map((esc) => (
                   <option key={esc.id} value={esc.nome}>
                     {esc.nome}
                   </option>
