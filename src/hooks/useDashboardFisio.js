@@ -5,17 +5,17 @@ import { db } from '../utils/firebase';
 
 export function useDashboardFisio() {
   const [stats, setStats] = useState({
-    totalLesoes: 0,
-    lesoesAtivas: 0,
-    lesoesRecuperadas: 0,
+    totalEpisodios: 0,
+    episodiosAtivos: 0,
+    episodiosRecuperados: 0,
     atletasEmRecuperacao: 0,
     sessoesSemana: 0,
     tempoMedioRecuperacao: 0,
   });
 
-  const [lesoesAtivas, setLesoesAtivas] = useState([]);
+  const [episodiosAtivos, setEpisodiosAtivos] = useState([]);
   const [agendamentos, setAgendamentos] = useState([]);
-  const [historicoLesoes, setHistoricoLesoes] = useState([]);
+  const [historicoEpisodios, setHistoricoEpisodios] = useState([]);
   const [escaloes, setEscaloes] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,143 +28,160 @@ export function useDashboardFisio() {
     try {
       setLoading(true);
 
-      // 1. Carregar Lesões
-      const lesoesSnap = await getDocs(collection(db, 'lesoes'));
-      const todasLesoes = lesoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 1. Carregar Episódios Clínicos
+      const episodiosSnap = await getDocs(collection(db, 'episodiosClinicos'));
+      const todosEpisodios = episodiosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const ativas = todasLesoes.filter(l => l.estado === 'ativa');
-      const recuperadas = todasLesoes.filter(l => l.estado === 'recuperada');
+      const ativos = todosEpisodios.filter(e => e.estado === 'ativo' || e.estado === 'em_tratamento');
+      const recuperados = todosEpisodios.filter(e => e.estado === 'alta' || e.estado === 'concluido');
 
-      // 2. Carregar Atletas
+      // 2. Carregar Todas as Sessões
+      const sessoesSnap = await getDocs(collection(db, 'sessoes'));
+      const todasSessoes = sessoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // 3. Carregar Atletas
       const atletasSnap = await getDocs(collection(db, 'atletas'));
       const todosAtletas = atletasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Enriquecer lesões com nome do atleta
-      const lesoesComAtleta = ativas.map(lesao => {
-        const atleta = todosAtletas.find(a => a.id === lesao.atletaId);
+      // 4. Enriquecer episódios com dados do atleta e sessões relacionadas
+      const episodiosComDados = ativos.map(episodio => {
+        const atleta = todosAtletas.find(a => a.id === episodio.atletaId);
+        const sessoesDoEpisodio = todasSessoes.filter(s => s.episodioClinicoId === episodio.id);
+        
         return {
-          ...lesao,
+          ...episodio,
           atletaNome: atleta?.nome || 'Desconhecido',
           atletaEquipa: atleta?.equipa || 'Sem equipa',
+          totalSessoes: sessoesDoEpisodio.length,
+          ultimaSessao: sessoesDoEpisodio.length > 0 
+            ? sessoesDoEpisodio.sort((a, b) => b.data.localeCompare(a.data))[0].data
+            : null,
         };
       });
 
-      setLesoesAtivas(lesoesComAtleta);
+      setEpisodiosAtivos(episodiosComDados);
 
-      // 3. Calcular tempo médio de recuperação
-      const recuperadasComDatas = recuperadas.filter(l => l.dataInicio && l.dataFim);
-      const tempoMedio = recuperadasComDatas.length > 0
+      // 5. Calcular tempo médio de recuperação
+      const recuperadosComDatas = recuperados.filter(e => e.dataInicio && e.dataFim);
+      const tempoMedio = recuperadosComDatas.length > 0
         ? Math.round(
-            recuperadasComDatas.reduce((acc, l) => {
-              const inicio = new Date(l.dataInicio);
-              const fim = new Date(l.dataFim);
+            recuperadosComDatas.reduce((acc, e) => {
+              const inicio = new Date(e.dataInicio);
+              const fim = new Date(e.dataFim);
               const dias = Math.round((fim - inicio) / (1000 * 60 * 60 * 24));
               return acc + dias;
-            }, 0) / recuperadasComDatas.length
+            }, 0) / recuperadosComDatas.length
           )
         : 0;
 
-      // 4. Carregar Sessões de Fisio (última semana)
+      // 6. Sessões da última semana
       const hoje = new Date();
       const inicioSemana = new Date(hoje);
       inicioSemana.setDate(hoje.getDate() - 7);
       const inicioSemanaISO = inicioSemana.toISOString().slice(0, 10);
       const hojeISO = hoje.toISOString().slice(0, 10);
 
-      const sessoesSnap = await getDocs(collection(db, 'sessoesFisio'));
-      const todasSessoes = sessoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const sessoesSemana = todasSessoes.filter(
         s => s.data >= inicioSemanaISO && s.data <= hojeISO
       );
 
-      // 5. Agendamentos (próximos 7 dias)
+      // 7. Agendamentos (próximos 7 dias)
       const fimSemana = new Date(hoje);
       fimSemana.setDate(hoje.getDate() + 7);
       const fimSemanaISO = fimSemana.toISOString().slice(0, 10);
 
       const agendamentosFuturos = todasSessoes
-        .filter(s => s.data >= hojeISO && s.data <= fimSemanaISO)
+        .filter(s => s.data >= hojeISO && s.data <= fimSemanaISO && s.estado !== 'concluida')
         .map(sessao => {
-          const atleta = todosAtletas.find(a => a.id === sessao.atletaId);
+          const episodio = todosEpisodios.find(e => e.id === sessao.episodioClinicoId);
+          const atleta = todosAtletas.find(a => a.id === episodio?.atletaId);
           return {
             ...sessao,
             atletaNome: atleta?.nome || 'Desconhecido',
             atletaEquipa: atleta?.equipa || 'Sem equipa',
+            tipoEpisodio: episodio?.tipo || 'Não especificado',
           };
         })
         .sort((a, b) => a.data.localeCompare(b.data));
 
       setAgendamentos(agendamentosFuturos);
 
-      // 6. Histórico de Lesões (últimas 10)
-      const historicoOrdenado = todasLesoes
+      // 8. Histórico de Episódios (últimos 10)
+      const historicoOrdenado = todosEpisodios
         .sort((a, b) => {
           const dataA = a.dataInicio || '2000-01-01';
           const dataB = b.dataInicio || '2000-01-01';
           return dataB.localeCompare(dataA);
         })
         .slice(0, 10)
-        .map(lesao => {
-          const atleta = todosAtletas.find(a => a.id === lesao.atletaId);
+        .map(episodio => {
+          const atleta = todosAtletas.find(a => a.id === episodio.atletaId);
+          const sessoesDoEpisodio = todasSessoes.filter(s => s.episodioClinicoId === episodio.id);
           return {
-            ...lesao,
+            ...episodio,
             atletaNome: atleta?.nome || 'Desconhecido',
             atletaEquipa: atleta?.equipa || 'Sem equipa',
+            totalSessoes: sessoesDoEpisodio.length,
           };
         });
 
-      setHistoricoLesoes(historicoOrdenado);
+      setHistoricoEpisodios(historicoOrdenado);
 
-      // 7. Estatísticas por Escalão
+      // 9. Estatísticas por Escalão
       const escaloesSnap = await getDocs(collection(db, 'escaloes'));
       const todosEscaloes = escaloesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       const escaloesComStats = todosEscaloes.map(esc => {
         const atletasEscalao = todosAtletas.filter(a => a.equipa === esc.nome);
-        const lesoesEscalao = todasLesoes.filter(l => {
-          const atleta = todosAtletas.find(a => a.id === l.atletaId);
+        const episodiosEscalao = todosEpisodios.filter(e => {
+          const atleta = todosAtletas.find(a => a.id === e.atletaId);
           return atleta?.equipa === esc.nome;
         });
-        const lesoesAtivasEscalao = lesoesEscalao.filter(l => l.estado === 'ativa');
+        const episodiosAtivosEscalao = episodiosEscalao.filter(e => 
+          e.estado === 'ativo' || e.estado === 'em_tratamento'
+        );
 
         return {
           ...esc,
-          totalLesoes: lesoesEscalao.length,
-          lesoesAtivas: lesoesAtivasEscalao.length,
+          totalEpisodios: episodiosEscalao.length,
+          episodiosAtivos: episodiosAtivosEscalao.length,
           totalAtletas: atletasEscalao.length,
         };
       });
 
       setEscaloes(escaloesComStats);
 
-      // 8. Alertas (atletas com lesões graves ou há muito tempo)
-      const alertasMock = ativas
-        .filter(l => {
-          if (l.gravidade === 'grave') return true;
-          if (!l.dataInicio) return false;
-          const inicio = new Date(l.dataInicio);
-          const diasLesao = Math.round((hoje - inicio) / (1000 * 60 * 60 * 24));
-          return diasLesao > 30;
+      // 10. Alertas (episódios graves ou prolongados)
+      const alertasMock = ativos
+        .filter(e => {
+          if (e.gravidade === 'grave' || e.gravidade === 'alta') return true;
+          if (!e.dataInicio) return false;
+          const inicio = new Date(e.dataInicio);
+          const diasEpisodio = Math.round((hoje - inicio) / (1000 * 60 * 60 * 24));
+          return diasEpisodio > 30;
         })
         .slice(0, 5)
-        .map(l => ({
-          tipo: l.gravidade === 'grave' ? 'grave' : 'prolongada',
-          texto: `${l.atletaNome} - ${l.tipo || 'Lesão'} ${
-            l.gravidade === 'grave' ? '(GRAVE)' : '(>30 dias)'
-          }`,
-          data: l.dataInicio,
-        }));
+        .map(e => {
+          const atleta = todosAtletas.find(a => a.id === e.atletaId);
+          return {
+            tipo: (e.gravidade === 'grave' || e.gravidade === 'alta') ? 'grave' : 'prolongado',
+            texto: `${atleta?.nome || 'Desconhecido'} - ${e.tipo || 'Episódio'} ${
+              (e.gravidade === 'grave' || e.gravidade === 'alta') ? '(GRAVE)' : '(>30 dias)'
+            }`,
+            data: e.dataInicio,
+          };
+        });
 
       setAlertas(alertasMock);
 
-      // 9. Set Stats
-      const atletasComLesaoAtiva = new Set(ativas.map(l => l.atletaId)).size;
+      // 11. Definir Estatísticas
+      const atletasComEpisodioAtivo = new Set(ativos.map(e => e.atletaId)).size;
 
       setStats({
-        totalLesoes: todasLesoes.length,
-        lesoesAtivas: ativas.length,
-        lesoesRecuperadas: recuperadas.length,
-        atletasEmRecuperacao: atletasComLesaoAtiva,
+        totalEpisodios: todosEpisodios.length,
+        episodiosAtivos: ativos.length,
+        episodiosRecuperados: recuperados.length,
+        atletasEmRecuperacao: atletasComEpisodioAtivo,
         sessoesSemana: sessoesSemana.length,
         tempoMedioRecuperacao: tempoMedio,
       });
@@ -176,14 +193,14 @@ export function useDashboardFisio() {
     }
   };
 
-  return {
-    stats,
-    lesoesAtivas,
-    agendamentos,
-    historicoLesoes,
-    escaloes,
-    alertas,
-    loading,
-    recarregar: carregarDados,
-  };
+return {
+  stats,
+  lesoesAtivas: episodiosAtivos,  // Manter nome antigo para compatibilidade
+  agendamentos,
+  historicoLesoes: historicoEpisodios,  // Manter nome antigo para compatibilidade
+  escaloes,
+  alertas,
+  loading,
+  recarregar: carregarDados,
+};
 }

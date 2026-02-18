@@ -1,0 +1,24 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "episodiosClinicos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "atletaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataInicio",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "fieldOverrides": []
+}
