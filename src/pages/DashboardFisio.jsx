@@ -89,11 +89,7 @@ export default function DashboardFisio({ user }) {
               loading={loading}
             />
 
-            {/* Histórico de Lesões */}
-            <HistoricoLesoesWidget 
-              historico={historicoLesoes}
-              loading={loading}
-            />
+           
           </div>
 
           {/* Coluna Direita (1/3) */}

@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { usePermissions } from "../hooks/usePermissions";
 import { UserPlus, Filter, Plus, Pencil, Trash2, X, Eye } from "lucide-react";
@@ -47,15 +54,18 @@ export default function Captacoes({ user }) {
     try {
       const snap = await getDocs(collection(db, "captacoes"));
       let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      
-      // FILTRAR CAPTAÇÕES BASEADO NAS PERMISSÕES
+
       if (permissions.isTreinador && permissions.equipas.length > 0) {
-        // Treinador: mostrar apenas captações dos seus escalões
-        lista = lista.filter(cap => permissions.equipas.includes(cap.escalao));
+        lista = lista.filter((cap) =>
+          permissions.equipas.includes(cap.escalao),
+        );
       }
-      // Admin/Direção: mostra todas (sem filtro)
-      
-      lista.sort((a, b) => new Date(b.dataRegisto) - new Date(a.dataRegisto));
+
+      lista.sort(
+        (a, b) =>
+          new Date(b.dataRegisto).getTime() -
+          new Date(a.dataRegisto).getTime(),
+      );
       setCaptacoes(lista);
     } catch (err) {
       console.error("Erro ao carregar captações:", err);
@@ -68,14 +78,13 @@ export default function Captacoes({ user }) {
     try {
       const snap = await getDocs(collection(db, "escaloes"));
       let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      
-      // FILTRAR ESCALÕES DISPONÍVEIS BASEADO NAS PERMISSÕES
+
       if (permissions.isTreinador && permissions.equipas.length > 0) {
-        // Treinador: mostrar apenas os seus escalões
-        lista = lista.filter(esc => permissions.equipas.includes(esc.nome));
+        lista = lista.filter((esc) =>
+          permissions.equipas.includes(esc.nome),
+        );
       }
-      // Admin/Direção: mostra todos (sem filtro)
-      
+
       setEscaloes(lista);
     } catch (err) {
       console.error("Erro ao carregar escalões:", err);
@@ -83,10 +92,10 @@ export default function Captacoes({ user }) {
   };
 
   const abrirModalAdicionar = () => {
-    // Se for treinador com apenas 1 equipa, pré-seleciona essa equipa
-    const escalaoInicial = permissions.isTreinador && permissions.equipas.length === 1
-      ? permissions.equipas[0]
-      : "";
+    const escalaoInicial =
+      permissions.isTreinador && permissions.equipas.length === 1
+        ? permissions.equipas[0]
+        : "";
 
     setForm({
       nome: "",
@@ -111,8 +120,10 @@ export default function Captacoes({ user }) {
   };
 
   const abrirModalEditar = (captacao) => {
-    // VERIFICAR PERMISSÃO ANTES DE EDITAR
-    if (permissions.isTreinador && !permissions.equipas.includes(captacao.escalao)) {
+    if (
+      permissions.isTreinador &&
+      !permissions.equipas.includes(captacao.escalao)
+    ) {
       alert("Não tem permissão para editar esta captação");
       return;
     }
@@ -152,8 +163,10 @@ export default function Captacoes({ user }) {
       return;
     }
 
-    // VERIFICAR PERMISSÃO PARA CRIAR/EDITAR NO ESCALÃO
-    if (permissions.isTreinador && !permissions.equipas.includes(form.escalao)) {
+    if (
+      permissions.isTreinador &&
+      !permissions.equipas.includes(form.escalao)
+    ) {
       alert("Não tem permissão para criar/editar captações neste escalão");
       return;
     }
@@ -174,10 +187,13 @@ export default function Captacoes({ user }) {
   };
 
   const apagarCaptacao = async (id) => {
-    const captacao = captacoes.find(c => c.id === id);
-    
-    // VERIFICAR PERMISSÃO ANTES DE APAGAR
-    if (captacao && permissions.isTreinador && !permissions.equipas.includes(captacao.escalao)) {
+    const captacao = captacoes.find((c) => c.id === id);
+
+    if (
+      captacao &&
+      permissions.isTreinador &&
+      !permissions.equipas.includes(captacao.escalao)
+    ) {
       alert("Não tem permissão para apagar esta captação");
       return;
     }
@@ -195,7 +211,11 @@ export default function Captacoes({ user }) {
 
   const captacoesFiltradas = captacoes.filter((cap) => {
     if (filtroStatus !== "todos" && cap.interesse !== filtroStatus) return false;
-    if (filtroAprovacao !== "todos" && cap.aprovadoDirecao !== filtroAprovacao) return false;
+    if (
+      filtroAprovacao !== "todos" &&
+      cap.aprovadoDirecao !== filtroAprovacao
+    )
+      return false;
     if (filtroEscalao !== "todos" && cap.escalao !== filtroEscalao) return false;
     return true;
   });
@@ -226,7 +246,6 @@ export default function Captacoes({ user }) {
     }
   };
 
-  // Loading inicial de permissões
   if (permissions.loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -235,21 +254,22 @@ export default function Captacoes({ user }) {
     );
   }
 
-  // Sem escalões disponíveis
   if (escaloes.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <UserPlus className="w-6 h-6 text-[#0b1635]" />
             <h1 className="text-2xl font-bold text-slate-900">Captações</h1>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
           <UserPlus className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 font-medium mb-2">Nenhum escalão disponível</p>
+          <p className="text-slate-600 font-medium mb-2">
+            Nenhum escalão disponível
+          </p>
           <p className="text-sm text-slate-500">
-            {permissions.isTreinador 
+            {permissions.isTreinador
               ? "Não tem equipas atribuídas. Contacte a administração."
               : "Ainda não existem escalões criados no sistema."}
           </p>
@@ -259,9 +279,9 @@ export default function Captacoes({ user }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <UserPlus className="w-6 h-6 text-[#0b1635]" />
@@ -271,14 +291,15 @@ export default function Captacoes({ user }) {
             Avaliação e acompanhamento de novos atletas
             {permissions.isTreinador && (
               <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                {permissions.equipas.length} equipa{permissions.equipas.length > 1 ? 's' : ''}
+                {permissions.equipas.length} equipa
+                {permissions.equipas.length > 1 ? "s" : ""}
               </span>
             )}
           </p>
         </div>
         <button
           onClick={abrirModalAdicionar}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0b1635] text-white rounded-xl font-medium hover:bg-[#152452] transition"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0b1635] text-white rounded-xl text-sm sm:text-base font-medium hover:bg-[#152452] transition"
         >
           <Plus className="w-4 h-4" />
           Nova Captação
@@ -286,7 +307,7 @@ export default function Captacoes({ user }) {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 mb-6">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-slate-600" />
           <span className="text-sm font-semibold text-slate-700">Filtros</span>
@@ -366,7 +387,7 @@ export default function Captacoes({ user }) {
         <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
           <UserPlus className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-500">
-            {captacoes.length === 0 
+            {captacoes.length === 0
               ? "Nenhuma captação registada"
               : "Nenhuma captação encontrada com os filtros selecionados"}
           </p>
@@ -385,7 +406,9 @@ export default function Captacoes({ user }) {
                     {cap.nome?.charAt(0) || "?"}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900">{cap.nome}</h3>
+                    <h3 className="font-semibold text-slate-900">
+                      {cap.nome}
+                    </h3>
                     <p className="text-xs text-slate-500">
                       {cap.idade} anos · {cap.escalao}
                     </p>
@@ -396,7 +419,9 @@ export default function Captacoes({ user }) {
               {/* Badges */}
               <div className="flex flex-wrap gap-2 mb-3">
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeInteresse(cap.interesse)}`}
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeInteresse(
+                    cap.interesse,
+                  )}`}
                 >
                   {cap.interesse === "interessado"
                     ? "Interessado"
@@ -405,7 +430,9 @@ export default function Captacoes({ user }) {
                     : "Não Interessado"}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeAprovacao(cap.aprovadoDirecao)}`}
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeAprovacao(
+                    cap.aprovadoDirecao,
+                  )}`}
                 >
                   {cap.aprovadoDirecao === "sim"
                     ? "✓ Aprovado"
@@ -491,7 +518,7 @@ export default function Captacoes({ user }) {
                   Informações Básicas
                 </h3>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
                       Nome Completo *
@@ -499,7 +526,9 @@ export default function Captacoes({ user }) {
                     <input
                       type="text"
                       value={form.nome}
-                      onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, nome: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                       required
                     />
@@ -512,7 +541,9 @@ export default function Captacoes({ user }) {
                     <input
                       type="number"
                       value={form.idade}
-                      onChange={(e) => setForm({ ...form, idade: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, idade: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                       required
                     />
@@ -525,10 +556,15 @@ export default function Captacoes({ user }) {
                   </label>
                   <select
                     value={form.escalao}
-                    onChange={(e) => setForm({ ...form, escalao: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, escalao: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     required
-                    disabled={permissions.isTreinador && permissions.equipas.length === 1}
+                    disabled={
+                      permissions.isTreinador &&
+                      permissions.equipas.length === 1
+                    }
                   >
                     <option value="">Selecionar escalão</option>
                     {escaloes.map((esc) => (
@@ -537,14 +573,15 @@ export default function Captacoes({ user }) {
                       </option>
                     ))}
                   </select>
-                  {permissions.isTreinador && permissions.equipas.length === 1 && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      ℹ️ Só pode criar captações para o seu escalão
-                    </p>
-                  )}
+                  {permissions.isTreinador &&
+                    permissions.equipas.length === 1 && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        ℹ️ Só pode criar captações para o seu escalão
+                      </p>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
                       Telemóvel *
@@ -552,7 +589,9 @@ export default function Captacoes({ user }) {
                     <input
                       type="tel"
                       value={form.telemovel}
-                      onChange={(e) => setForm({ ...form, telemovel: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, telemovel: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                       placeholder="912 345 678"
                     />
@@ -565,7 +604,9 @@ export default function Captacoes({ user }) {
                     <input
                       type="email"
                       value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, email: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                       placeholder="atleta@email.com"
                     />
@@ -578,7 +619,7 @@ export default function Captacoes({ user }) {
                     Encarregado de Educação
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">
                         Nome do Encarregado
@@ -586,7 +627,12 @@ export default function Captacoes({ user }) {
                       <input
                         type="text"
                         value={form.encarregadoNome}
-                        onChange={(e) => setForm({ ...form, encarregadoNome: e.target.value })}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            encarregadoNome: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                         placeholder="Ex: Maria Silva"
                       />
@@ -599,7 +645,12 @@ export default function Captacoes({ user }) {
                       <input
                         type="tel"
                         value={form.encarregadoTelefone}
-                        onChange={(e) => setForm({ ...form, encarregadoTelefone: e.target.value })}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            encarregadoTelefone: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                         placeholder="912 345 678"
                       />
@@ -621,7 +672,9 @@ export default function Captacoes({ user }) {
                   <input
                     type="text"
                     value={form.exClubes}
-                    onChange={(e) => setForm({ ...form, exClubes: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, exClubes: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     placeholder="Ex: Sporting CP, FC Porto"
                   />
@@ -634,7 +687,9 @@ export default function Captacoes({ user }) {
                   <input
                     type="text"
                     value={form.anosVoleibol}
-                    onChange={(e) => setForm({ ...form, anosVoleibol: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, anosVoleibol: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     placeholder="Ex: 3 anos"
                   />
@@ -653,7 +708,12 @@ export default function Captacoes({ user }) {
                   </label>
                   <textarea
                     value={form.pontosPositivos}
-                    onChange={(e) => setForm({ ...form, pontosPositivos: e.target.value })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        pontosPositivos: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     rows={3}
                     placeholder="Ex: Boa técnica de manchete, altura acima da média..."
@@ -666,7 +726,12 @@ export default function Captacoes({ user }) {
                   </label>
                   <textarea
                     value={form.pontosNegativos}
-                    onChange={(e) => setForm({ ...form, pontosNegativos: e.target.value })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        pontosNegativos: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     rows={3}
                     placeholder="Ex: Pouca força no ataque, precisa melhorar defesa..."
@@ -679,7 +744,9 @@ export default function Captacoes({ user }) {
                   </label>
                   <select
                     value={form.interesse}
-                    onChange={(e) => setForm({ ...form, interesse: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, interesse: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                   >
                     <option value="interessado">✅ Interessado</option>
@@ -701,7 +768,12 @@ export default function Captacoes({ user }) {
                   </label>
                   <select
                     value={form.aprovadoDirecao}
-                    onChange={(e) => setForm({ ...form, aprovadoDirecao: e.target.value })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        aprovadoDirecao: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     disabled={permissions.isTreinador}
                   >
@@ -722,7 +794,12 @@ export default function Captacoes({ user }) {
                   </label>
                   <textarea
                     value={form.observacoes}
-                    onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        observacoes: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     rows={3}
                     placeholder="Notas adicionais sobre o atleta..."
@@ -731,7 +808,7 @@ export default function Captacoes({ user }) {
               </div>
 
               {/* Botões */}
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -774,9 +851,11 @@ export default function Captacoes({ user }) {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${getBadgeInteresse(captacaoSelecionada.interesse)}`}
+                  className={`px-2 py-1 rounded text-xs font-medium ${getBadgeInteresse(
+                    captacaoSelecionada.interesse,
+                  )}`}
                 >
                   {captacaoSelecionada.interesse === "interessado"
                     ? "✅ Interessado"
@@ -785,7 +864,9 @@ export default function Captacoes({ user }) {
                     : "❌ Não Interessado"}
                 </span>
                 <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${getBadgeAprovacao(captacaoSelecionada.aprovadoDirecao)}`}
+                  className={`px-2 py-1 rounded text-xs font-medium ${getBadgeAprovacao(
+                    captacaoSelecionada.aprovadoDirecao,
+                  )}`}
                 >
                   {captacaoSelecionada.aprovadoDirecao === "sim"
                     ? "✓ Aprovado Direção"
@@ -801,10 +882,10 @@ export default function Captacoes({ user }) {
               {/* Info Básica */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                  <div className="w-1 h-4 bg-[#f5c623] rounded" />
                   Informações Básicas
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Idade</p>
                     <p className="font-semibold text-slate-900">
@@ -834,11 +915,17 @@ export default function Captacoes({ user }) {
                     </div>
                   )}
                   {captacaoSelecionada.encarregadoNome && (
-                    <div className="p-3 bg-slate-50 rounded-lg col-span-2">
-                      <p className="text-xs text-slate-500">Encarregado de Educação</p>
-                      <p className="font-semibold text-slate-900">{captacaoSelecionada.encarregadoNome}</p>
+                    <div className="p-3 bg-slate-50 rounded-lg sm:col-span-2">
+                      <p className="text-xs text-slate-500">
+                        Encarregado de Educação
+                      </p>
+                      <p className="font-semibold text-slate-900">
+                        {captacaoSelecionada.encarregadoNome}
+                      </p>
                       {captacaoSelecionada.encarregadoTelefone && (
-                        <p className="text-xs text-slate-600 mt-1">📱 {captacaoSelecionada.encarregadoTelefone}</p>
+                        <p className="text-xs text-slate-600 mt-1">
+                          📱 {captacaoSelecionada.encarregadoTelefone}
+                        </p>
                       )}
                     </div>
                   )}
@@ -848,7 +935,7 @@ export default function Captacoes({ user }) {
               {/* Histórico Desportivo */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                  <div className="w-1 h-4 bg-[#f5c623] rounded" />
                   Histórico Desportivo
                 </h3>
                 <div className="space-y-3">
@@ -862,7 +949,9 @@ export default function Captacoes({ user }) {
                   )}
                   {captacaoSelecionada.anosVoleibol && (
                     <div className="p-3 bg-slate-50 rounded-lg">
-                      <p className="text-xs text-slate-500">Anos de Voleibol</p>
+                      <p className="text-xs text-slate-500">
+                        Anos de Voleibol
+                      </p>
                       <p className="text-sm text-slate-900">
                         {captacaoSelecionada.anosVoleibol}
                       </p>
@@ -874,7 +963,7 @@ export default function Captacoes({ user }) {
               {/* Avaliação do Treinador */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                  <div className="w-1 h-4 bg-[#f5c623] rounded" />
                   Avaliação do Treinador
                 </h3>
                 <div className="space-y-3">
@@ -905,7 +994,7 @@ export default function Captacoes({ user }) {
               {captacaoSelecionada.observacoes && (
                 <div>
                   <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                    <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                    <div className="w-1 h-4 bg-[#f5c623] rounded" />
                     Observações Gerais
                   </h3>
                   <div className="p-3 bg-slate-50 rounded-lg">
@@ -920,21 +1009,20 @@ export default function Captacoes({ user }) {
               <div className="pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500">
                   Registado em:{" "}
-                  {new Date(captacaoSelecionada.dataRegisto).toLocaleDateString(
-                    "pt-PT",
-                    {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )}
+                  {new Date(
+                    captacaoSelecionada.dataRegisto,
+                  ).toLocaleDateString("pt-PT", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => {
                     setShowDetalhesModal(false);

@@ -8,6 +8,7 @@ import {
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./utils/firebase";
+import ExerciciosSebenta from "./pages/ExerciciosSebenta";
 import Dashboard from "./pages/Dashboard";
 import DashboardLayout from "./components/DashboardLayout";
 import Atletas from "./pages/Atletas";
@@ -46,6 +47,16 @@ function AppContent({ user }) {
             path="/admin/utilizadores"
             element={<AdminUsers user={user} />}
           />
+
+  <Route
+  path="/exercicios"
+  element={
+    <DashboardLayout user={user}>
+      <ExerciciosSebenta user={user} />
+    </DashboardLayout>
+  }
+/>
+
 
 
 <Route path="quotas" element={

@@ -1,6 +1,6 @@
 // DashboardLayout.jsx
 import { useState } from "react";
-import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone, Dumbbell } from "lucide-react";
 import { FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
 import { auth } from "../utils/firebase";
@@ -17,6 +17,8 @@ const navItems = [
   // 3. Atividades diárias (uso frequente)
   { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador","coordenador","fisio"] },
   { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador","coordenador"] },
+
+  { id: "sebenta", label: "Sebenta Exercícios", icon: Dumbbell, path: "/exercicios", roles: ["treinador","admin","coordenador","fisio"] },
   
   // 4. Comunicação
   { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin","direcao","coordenador"] },
