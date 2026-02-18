@@ -19,6 +19,12 @@ export default function Treinos({ user }) {
   const [showEditarTreinoModal, setShowEditarTreinoModal] = useState(false);
 
   const handleGerarTreinosAno = async () => {
+    // VERIFICAR PERMISSÃO
+    if (!permissions.isAdmin && !permissions.isDirecao) {
+      alert("Não tem permissão para gerar treinos");
+      return;
+    }
+
     if (!window.confirm("Gerar todos os treinos para o ano?")) return;
 
     setGerando(true);
@@ -40,9 +46,23 @@ export default function Treinos({ user }) {
     }
   };
 
-const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
-const planosFiltrados = permissions.filterByEquipa(planos, 'equipa'); // ✅
-const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
+  const handleAbrirPlanosModal = () => {
+    // VERIFICAR PERMISSÃO
+    if (!permissions.isAdmin && !permissions.isDirecao) {
+      alert("Não tem permissão para gerir planos de treinos");
+      return;
+    }
+    setShowPlanosModal(true);
+  };
+
+  const handleEditarClick = () => {
+    // VERIFICAR PERMISSÃO
+    setShowEditarTreinoModal(true);
+  };
+
+  const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
+  const planosFiltrados = permissions.filterByEquipa(planos, 'equipa');
+  const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa');
 
   const handleMudarMes = (novoAno, novoMes) => {
     setCurrentYear(novoAno);
@@ -51,10 +71,6 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
 
   const handleTreinoClick = (treino) => {
     setTreinoSelecionado(treino);
-  };
-
-  const handleEditarClick = () => {
-    setShowEditarTreinoModal(true);
   };
 
   const handleSaveDetalhes = (novosDados) => {
@@ -67,6 +83,15 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
     // Atualizar treino selecionado
     setTreinoSelecionado({ ...treinoSelecionado, ...novosDados });
   };
+
+  // Loading inicial de permissões
+  if (permissions.loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -82,39 +107,50 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
                 <h1 className="text-xl md:text-2xl font-bold text-slate-900">Treinos</h1>
                 <p className="text-xs md:text-sm text-slate-600">
                   Calendário anual de treinos e presenças
+                  {permissions.isTreinador && (
+                    <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                      {permissions.equipas.length} equipa{permissions.equipas.length > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 md:gap-3">
-              <button
-                onClick={() => setShowPlanosModal(true)}
-                className="px-3 md:px-4 py-2 rounded-lg bg-white text-slate-700 text-xs md:text-sm font-medium flex items-center space-x-2 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-all shadow-sm"
-              >
-                <Settings2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Gerir planos</span>
-                <span className="sm:hidden">Planos</span>
-              </button>
+              {/* BOTÕES APENAS PARA ADMIN/DIREÇÃO */}
+              {(permissions.isAdmin || permissions.isDirecao) && (
+                <>
+                  <button
+                    onClick={handleAbrirPlanosModal}
+                    className="px-3 md:px-4 py-2 rounded-lg bg-white text-slate-700 text-xs md:text-sm font-medium flex items-center space-x-2 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Gerir planos</span>
+                    <span className="sm:hidden">Planos</span>
+                  </button>
 
-              <button
-                onClick={handleGerarTreinosAno}
-                disabled={gerando}
-                className="px-3 md:px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs md:text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-700 hover:to-blue-800 transition-all shadow-md"
-              >
-                {gerando ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="hidden sm:inline">A gerar…</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span className="hidden sm:inline">Gerar treinos do ano</span>
-                    <span className="sm:hidden">Gerar</span>
-                  </>
-                )}
-              </button>
+                  <button
+                    onClick={handleGerarTreinosAno}
+                    disabled={gerando}
+                    className="px-3 md:px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs md:text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-700 hover:to-blue-800 transition-all shadow-md"
+                  >
+                    {gerando ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span className="hidden sm:inline">A gerar…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span className="hidden sm:inline">Gerar treinos do ano</span>
+                        <span className="sm:hidden">Gerar</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
 
+              {/* BOTÃO DE ATUALIZAR PARA TODOS */}
               <button
                 onClick={recarregar}
                 className="px-3 py-2 rounded-lg bg-white text-slate-700 text-xs md:text-sm border border-slate-300 flex items-center space-x-2 hover:bg-slate-50 transition-all shadow-sm"
@@ -136,6 +172,7 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
           loading={loading}
           onMudarMes={handleMudarMes}
           onTreinoClick={handleTreinoClick}
+          permissions={permissions}
         />
       </main>
 
@@ -148,6 +185,7 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
           onUpdate={() => {
             recarregar();
           }}
+          permissions={permissions}
         />
       )}
 
@@ -156,6 +194,7 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
           treino={treinoSelecionado}
           onClose={() => setTreinoSelecionado(null)}
           onEditarClick={handleEditarClick}
+          
         />
       )}
 
@@ -164,6 +203,7 @@ const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa'); // ✅
           treino={treinoSelecionado}
           onClose={() => setShowEditarTreinoModal(false)}
           onSave={handleSaveDetalhes}
+          permissions={permissions}
         />
       )}
     </div>

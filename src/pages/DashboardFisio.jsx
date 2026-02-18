@@ -1,23 +1,25 @@
 import { usePermissions } from '../hooks/usePermissions';
-import { useDashboardAdmin } from '../hooks/useDashboardAdmin';
-import StatsCardsAdmin from '../components/dashboard/admin/StatsCardsAdmin';
-import QuotasOverviewWidget from '../components/dashboard/admin/QuotasOverviewWidget';
-import EscaloesComparisonWidget from '../components/dashboard/admin/EscaloesComparisonWidget';
-import AtividadeRecenteWidget from '../components/dashboard/admin/AtividadeRecenteWidget';
-import GraficosWidget from '../components/dashboard/admin/GraficosWidget';
+import { useDashboardFisio } from '../hooks/useDashboardFisio';
+import StatsCardsFisio from '../components/fisio/StatsCardsFisio';
+import LesoesAtivasWidget from '../components/fisio/LesoesAtivasWidget';
+import AgendamentosWidget from '../components/fisio/AgendamentosWidget';
+import HistoricoLesoesWidget from '../components/fisio/HistoricoLesoesWidget';
+import EscaloesLesoesWidget from '../components/fisio/EscaloesLesoesWidget';
+import AlertasFisioWidget from '../components/fisio/AlertasFisioWidget';
 import { RefreshCw } from 'lucide-react';
 
-export default function DashboardAdmin({ user }) {
+export default function DashboardFisio({ user }) {
   const permissions = usePermissions(user);
   const {
     stats,
-    quotas,
+    lesoesAtivas,
+    agendamentos,
+    historicoLesoes,
     escaloes,
-    treinadores,
-    atividadeRecente,
+    alertas,
     loading,
     recarregar,
-  } = useDashboardAdmin();
+  } = useDashboardFisio();
 
   const dataFormatada = new Date().toLocaleDateString('pt-PT', {
     weekday: 'long',
@@ -26,30 +28,30 @@ export default function DashboardAdmin({ user }) {
     year: 'numeric',
   });
 
-  const primeiroNome = user?.displayName?.split(' ')[0] || 'Admin';
+  const primeiroNome = user?.displayName?.split(' ')[0] || 'Fisio';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+      <div className="bg-[#0b1635] text-white">
         <div className="px-4 md:px-8 py-6 md:py-8">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
-                  👔 Administração
+                  🩺 Fisioterapia
                 </span>
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
                   📅 Época 25/26
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              <h1 className="text-white md:text-4xl font-bold mb-2">
                 Bom dia, {primeiroNome}! 👋
               </h1>
-              <p className="text-slate-200 text-sm md:text-base mb-2 capitalize">
+              <p className="text-white-100 text-sm md:text-base mb-2 capitalize">
                 {dataFormatada}
               </p>
-              <p className="text-slate-300 text-sm">
+              <p className="text-white-200 text-sm">
                 🏐 <span className="font-medium">Real Clube Senhorense</span>
               </p>
             </div>
@@ -69,37 +71,42 @@ export default function DashboardAdmin({ user }) {
       {/* Main Content */}
       <div className="px-4 md:px-8 py-6 md:py-8">
         {/* Stats Cards */}
-        <StatsCardsAdmin stats={stats} loading={loading} />
+        <StatsCardsFisio stats={stats} loading={loading} />
 
         {/* Grid Principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Coluna Esquerda (2/3) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Gráficos */}
-            <GraficosWidget 
+            {/* Lesões Ativas */}
+            <LesoesAtivasWidget 
+              lesoes={lesoesAtivas}
+              loading={loading}
+            />
+
+            {/* Escalões com mais lesões */}
+            <EscaloesLesoesWidget 
               escaloes={escaloes}
               loading={loading}
             />
 
-            {/* Comparação entre Escalões */}
-            <EscaloesComparisonWidget 
-              escaloes={escaloes}
-              loading={loading}
-            />
-
-            {/* Quotas Overview */}
-            <QuotasOverviewWidget 
-              quotas={quotas}
+            {/* Histórico de Lesões */}
+            <HistoricoLesoesWidget 
+              historico={historicoLesoes}
               loading={loading}
             />
           </div>
 
           {/* Coluna Direita (1/3) */}
           <div className="space-y-6 lg:sticky lg:top-6">
-        
-            {/* Atividade Recente */}
-            <AtividadeRecenteWidget 
-              atividade={atividadeRecente}
+            {/* Alertas */}
+            <AlertasFisioWidget 
+              alertas={alertas}
+              loading={loading}
+            />
+
+            {/* Agendamentos */}
+            <AgendamentosWidget 
+              agendamentos={agendamentos}
               loading={loading}
             />
           </div>

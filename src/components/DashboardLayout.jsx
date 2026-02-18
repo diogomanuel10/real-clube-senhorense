@@ -19,7 +19,7 @@ const navItems = [
   { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador","coordenador"] },
   
   // 4. Comunicação
-  { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin","treinador","coordenador"] },
+  { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin","direcao","coordenador"] },
   
   // 5. Gestão administrativa (menos frequente)
   { id: "equipamentos", label: "Equipamentos", icon: Users2, path: "/equipamentos", roles: ["admin","coordenador"] },

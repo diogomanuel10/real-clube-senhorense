@@ -1,88 +1,59 @@
+// src/hooks/usePermissions.jsx
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../utils/firebase';
 
 export function usePermissions(user) {
   const [permissions, setPermissions] = useState({
+    loading: true,
     isAdmin: false,
     isDirecao: false,
     isTreinador: false,
+    isFisio: false, // ✅ NOVO
     isAtleta: false,
     equipas: [],
-    loading: true,
   });
 
   useEffect(() => {
-    const loadPermissions = async () => {
-      if (!user) {
-        setPermissions({
-          isAdmin: false,
-          isDirecao: false,
-          isTreinador: false,
-          isAtleta: false,
-          equipas: [],
-          loading: false,
-        });
-        return;
-      }
+    if (!user) {
+      setPermissions({
+        loading: false,
+        isAdmin: false,
+        isDirecao: false,
+        isTreinador: false,
+        isFisio: false, // ✅ NOVO
+        isAtleta: false,
+        equipas: [],
+      });
+      return;
+    }
 
-      try {
-        // Buscar perfil do utilizador
-        const q = query(
-          collection(db, 'utilizadores'),
-          where('email', '==', user.email)
-        );
-        const snap = await getDocs(q);
+    const role = user.role?.toLowerCase();
+    const equipas = Array.isArray(user.equipas) ? user.equipas : [];
 
-        if (!snap.empty) {
-          const perfil = snap.docs[0].data();
-          const role = perfil.role || perfil.perfil || 'viewer';
-          
-          setPermissions({
-            isAdmin: role === 'admin',
-            isDirecao: role === 'direcao',
-            isTreinador: role === 'treinador',
-            isAtleta: role === 'atleta',
-            equipas: Array.isArray(perfil.equipas) ? perfil.equipas : [],
-            loading: false,
-          });
-        } else {
-          setPermissions({
-            isAdmin: false,
-            isDirecao: false,
-            isTreinador: false,
-            isAtleta: false,
-            equipas: [],
-            loading: false,
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao carregar permissões:', error);
-        setPermissions(prev => ({ ...prev, loading: false }));
-      }
-    };
-
-    loadPermissions();
+    setPermissions({
+      loading: false,
+      isAdmin: role === 'admin',
+      isDirecao: role === 'direcao',
+      isTreinador: role === 'treinador',
+      isFisio: role === 'fisio' || role === 'fisioterapeuta', // ✅ NOVO
+      isAtleta: role === 'atleta',
+      equipas,
+    });
   }, [user]);
 
-  // Função helper para verificar se pode ver uma equipa
-  const canViewEquipa = (equipaNome) => {
-    if (permissions.isAdmin || permissions.isDirecao) return true;
+  const canViewEquipa = (equipa) => {
+    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return true; // ✅ Fisio pode ver todas
     if (permissions.isTreinador) {
-      return permissions.equipas.includes(equipaNome);
+      return permissions.equipas.includes(equipa);
     }
     return false;
   };
 
-  // Função helper para filtrar items por equipa
   const filterByEquipa = (items, equipaField = 'equipa') => {
-    if (permissions.isAdmin || permissions.isDirecao) return items;
-    if (permissions.isTreinador && permissions.equipas.length > 0) {
-      return items.filter(item => 
-        permissions.equipas.includes(item[equipaField])
-      );
+    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return items; // ✅ Fisio pode ver todas
+    if (permissions.isTreinador) {
+      return items.filter(item => permissions.equipas.includes(item[equipaField]));
     }
-    return [];
+    return items;
   };
 
   return {

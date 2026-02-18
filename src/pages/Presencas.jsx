@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../utils/firebase";
+import { usePermissions } from "../hooks/usePermissions";
 import { 
   Calendar, 
   TrendingUp, 
@@ -16,7 +17,8 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-export default function Presencas() {
+export default function Presencas({ user }) {
+  const permissions = usePermissions(user);
   const [escaloes, setEscaloes] = useState([]);
   const [escalaoSelecionado, setEscalaoSelecionado] = useState("");
   const [atletas, setAtletas] = useState([]);
@@ -28,8 +30,10 @@ export default function Presencas() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
   useEffect(() => {
-    carregarEscaloes();
-  }, []);
+    if (!permissions.loading) {
+      carregarEscaloes();
+    }
+  }, [permissions.loading]);
 
   useEffect(() => {
     if (escalaoSelecionado) {
@@ -40,7 +44,15 @@ export default function Presencas() {
   const carregarEscaloes = async () => {
     try {
       const snap = await getDocs(collection(db, "escaloes"));
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      
+      // FILTRAR ESCALÕES BASEADO NAS PERMISSÕES
+      if (permissions.isTreinador && permissions.equipas.length > 0) {
+        // Treinador: mostrar apenas escalões das suas equipas
+        lista = lista.filter(esc => permissions.equipas.includes(esc.nome));
+      }
+      // Admin/Direção: mostra todos (sem filtro)
+      
       lista.sort((a, b) => a.nome.localeCompare(b.nome));
       setEscaloes(lista);
       
@@ -54,6 +66,12 @@ export default function Presencas() {
 
   const carregarDadosEscalao = async () => {
     if (!escalaoSelecionado) return;
+    
+    // VERIFICAR PERMISSÃO ANTES DE CARREGAR
+    if (permissions.isTreinador && !permissions.equipas.includes(escalaoSelecionado)) {
+      console.warn("Sem permissão para ver este escalão");
+      return;
+    }
     
     setLoading(true);
     try {
@@ -167,6 +185,38 @@ export default function Presencas() {
     }))
     .sort((a, b) => b.stats.percentagem - a.stats.percentagem);
 
+  // Loading inicial de permissões
+  if (permissions.loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-10 h-10 border-2 border-[#0b1635] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Sem escalões disponíveis
+  if (escaloes.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-6 h-6 text-[#0b1635]" />
+            <h1 className="text-2xl font-bold text-slate-900">Presenças</h1>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-600 font-medium mb-2">Nenhum escalão disponível</p>
+          <p className="text-sm text-slate-500">
+            {permissions.isTreinador 
+              ? "Não tem equipas atribuídas. Contacte a administração."
+              : "Ainda não existem escalões criados no sistema."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -177,6 +227,11 @@ export default function Presencas() {
         </div>
         <p className="text-sm text-slate-600">
           Análise de assiduidade e estatísticas por escalão
+          {permissions.isTreinador && (
+            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+              {permissions.equipas.length} equipa{permissions.equipas.length > 1 ? 's' : ''}
+            </span>
+          )}
         </p>
       </div>
 
@@ -312,7 +367,7 @@ export default function Presencas() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                                    <thead className="bg-slate-100">
+                  <thead className="bg-slate-100">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Atleta
@@ -394,4 +449,3 @@ export default function Presencas() {
     </div>
   );
 }
-

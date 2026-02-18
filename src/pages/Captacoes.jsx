@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../utils/firebase";
+import { usePermissions } from "../hooks/usePermissions";
 import { UserPlus, Filter, Plus, Pencil, Trash2, X, Eye } from "lucide-react";
 
-export default function Captacoes() {
+export default function Captacoes({ user }) {
+  const permissions = usePermissions(user);
   const [captacoes, setCaptacoes] = useState([]);
   const [escaloes, setEscaloes] = useState([]);
   const [filtroEscalao, setFiltroEscalao] = useState("todos");
@@ -21,7 +23,7 @@ export default function Captacoes() {
     escalao: "",
     telemovel: "",
     email: "",
-    encarregadoNome: "",        
+    encarregadoNome: "",
     encarregadoTelefone: "",
     exClubes: "",
     anosVoleibol: "",
@@ -34,15 +36,25 @@ export default function Captacoes() {
   });
 
   useEffect(() => {
-    carregarCaptacoes();
-    carregarEscaloes();
-  }, []);
+    if (!permissions.loading) {
+      carregarCaptacoes();
+      carregarEscaloes();
+    }
+  }, [permissions.loading]);
 
   const carregarCaptacoes = async () => {
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "captacoes"));
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      
+      // FILTRAR CAPTAÇÕES BASEADO NAS PERMISSÕES
+      if (permissions.isTreinador && permissions.equipas.length > 0) {
+        // Treinador: mostrar apenas captações dos seus escalões
+        lista = lista.filter(cap => permissions.equipas.includes(cap.escalao));
+      }
+      // Admin/Direção: mostra todas (sem filtro)
+      
       lista.sort((a, b) => new Date(b.dataRegisto) - new Date(a.dataRegisto));
       setCaptacoes(lista);
     } catch (err) {
@@ -55,7 +67,15 @@ export default function Captacoes() {
   const carregarEscaloes = async () => {
     try {
       const snap = await getDocs(collection(db, "escaloes"));
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      
+      // FILTRAR ESCALÕES DISPONÍVEIS BASEADO NAS PERMISSÕES
+      if (permissions.isTreinador && permissions.equipas.length > 0) {
+        // Treinador: mostrar apenas os seus escalões
+        lista = lista.filter(esc => permissions.equipas.includes(esc.nome));
+      }
+      // Admin/Direção: mostra todos (sem filtro)
+      
       setEscaloes(lista);
     } catch (err) {
       console.error("Erro ao carregar escalões:", err);
@@ -63,14 +83,19 @@ export default function Captacoes() {
   };
 
   const abrirModalAdicionar = () => {
+    // Se for treinador com apenas 1 equipa, pré-seleciona essa equipa
+    const escalaoInicial = permissions.isTreinador && permissions.equipas.length === 1
+      ? permissions.equipas[0]
+      : "";
+
     setForm({
       nome: "",
       idade: "",
-      escalao: "",
+      escalao: escalaoInicial,
       telemovel: "",
       email: "",
-      encarregadoNome: "",        // ✅ NOVO
-      encarregadoTelefone: "",    // ✅ NOVO
+      encarregadoNome: "",
+      encarregadoTelefone: "",
       exClubes: "",
       anosVoleibol: "",
       pontosPositivos: "",
@@ -86,14 +111,20 @@ export default function Captacoes() {
   };
 
   const abrirModalEditar = (captacao) => {
+    // VERIFICAR PERMISSÃO ANTES DE EDITAR
+    if (permissions.isTreinador && !permissions.equipas.includes(captacao.escalao)) {
+      alert("Não tem permissão para editar esta captação");
+      return;
+    }
+
     setForm({
       nome: captacao.nome || "",
       idade: captacao.idade || "",
       escalao: captacao.escalao || "",
       telemovel: captacao.telemovel || "",
       email: captacao.email || "",
-      encarregadoNome: captacao.encarregadoNome || "",        // ✅ NOVO
-    encarregadoTelefone: captacao.encarregadoTelefone || "", // ✅ NOVO
+      encarregadoNome: captacao.encarregadoNome || "",
+      encarregadoTelefone: captacao.encarregadoTelefone || "",
       exClubes: captacao.exClubes || "",
       anosVoleibol: captacao.anosVoleibol || "",
       pontosPositivos: captacao.pontosPositivos || "",
@@ -121,6 +152,12 @@ export default function Captacoes() {
       return;
     }
 
+    // VERIFICAR PERMISSÃO PARA CRIAR/EDITAR NO ESCALÃO
+    if (permissions.isTreinador && !permissions.equipas.includes(form.escalao)) {
+      alert("Não tem permissão para criar/editar captações neste escalão");
+      return;
+    }
+
     try {
       if (modoEdicao && captacaoSelecionada) {
         await updateDoc(doc(db, "captacoes", captacaoSelecionada.id), form);
@@ -137,6 +174,14 @@ export default function Captacoes() {
   };
 
   const apagarCaptacao = async (id) => {
+    const captacao = captacoes.find(c => c.id === id);
+    
+    // VERIFICAR PERMISSÃO ANTES DE APAGAR
+    if (captacao && permissions.isTreinador && !permissions.equipas.includes(captacao.escalao)) {
+      alert("Não tem permissão para apagar esta captação");
+      return;
+    }
+
     if (!confirm("Tens a certeza que queres eliminar esta captação?")) return;
 
     try {
@@ -148,13 +193,12 @@ export default function Captacoes() {
     }
   };
 
-const captacoesFiltradas = captacoes.filter((cap) => {
-  if (filtroStatus !== "todos" && cap.interesse !== filtroStatus) return false;
-  if (filtroAprovacao !== "todos" && cap.aprovadoDirecao !== filtroAprovacao) return false;
-  if (filtroEscalao !== "todos" && cap.escalao !== filtroEscalao) return false; // ✅ ADICIONA ESTA LINHA
-  return true;
-});
-
+  const captacoesFiltradas = captacoes.filter((cap) => {
+    if (filtroStatus !== "todos" && cap.interesse !== filtroStatus) return false;
+    if (filtroAprovacao !== "todos" && cap.aprovadoDirecao !== filtroAprovacao) return false;
+    if (filtroEscalao !== "todos" && cap.escalao !== filtroEscalao) return false;
+    return true;
+  });
 
   const getBadgeInteresse = (interesse) => {
     switch (interesse) {
@@ -182,6 +226,38 @@ const captacoesFiltradas = captacoes.filter((cap) => {
     }
   };
 
+  // Loading inicial de permissões
+  if (permissions.loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-10 h-10 border-2 border-[#0b1635] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Sem escalões disponíveis
+  if (escaloes.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <UserPlus className="w-6 h-6 text-[#0b1635]" />
+            <h1 className="text-2xl font-bold text-slate-900">Captações</h1>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <UserPlus className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-600 font-medium mb-2">Nenhum escalão disponível</p>
+          <p className="text-sm text-slate-500">
+            {permissions.isTreinador 
+              ? "Não tem equipas atribuídas. Contacte a administração."
+              : "Ainda não existem escalões criados no sistema."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -193,6 +269,11 @@ const captacoesFiltradas = captacoes.filter((cap) => {
           </div>
           <p className="text-sm text-slate-600">
             Avaliação e acompanhamento de novos atletas
+            {permissions.isTreinador && (
+              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                {permissions.equipas.length} equipa{permissions.equipas.length > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -242,39 +323,36 @@ const captacoesFiltradas = captacoes.filter((cap) => {
               <option value="pendente">Pendente</option>
             </select>
           </div>
-          {/* Dentro da secção de Filtros, adiciona isto depois do filtro "Aprovação Direção": */}
 
-<div>
-  <label className="block text-xs font-medium text-slate-600 mb-1">
-    Escalão
-  </label>
-  <select
-    value={filtroEscalao}
-    onChange={(e) => setFiltroEscalao(e.target.value)}
-    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
-  >
-    <option value="todos">Todos os escalões</option>
-    {escaloes.map((esc) => (
-      <option key={esc.id} value={esc.nome}>
-        {esc.nome}
-      </option>
-    ))}
-  </select>
-</div>
-
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Escalão
+            </label>
+            <select
+              value={filtroEscalao}
+              onChange={(e) => setFiltroEscalao(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+            >
+              <option value="todos">Todos os escalões</option>
+              {escaloes.map((esc) => (
+                <option key={esc.id} value={esc.nome}>
+                  {esc.nome}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex items-end">
-           <button
-  onClick={() => {
-    setFiltroStatus("todos");
-    setFiltroAprovacao("todos");
-    setFiltroEscalao("todos"); // ✅ ADICIONA ESTA LINHA
-  }}
-  className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900"
->
-  Limpar filtros
-</button>
-
+            <button
+              onClick={() => {
+                setFiltroStatus("todos");
+                setFiltroAprovacao("todos");
+                setFiltroEscalao("todos");
+              }}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900"
+            >
+              Limpar filtros
+            </button>
           </div>
         </div>
       </div>
@@ -287,7 +365,11 @@ const captacoesFiltradas = captacoes.filter((cap) => {
       ) : captacoesFiltradas.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
           <UserPlus className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Nenhuma captação encontrada</p>
+          <p className="text-slate-500">
+            {captacoes.length === 0 
+              ? "Nenhuma captação registada"
+              : "Nenhuma captação encontrada com os filtros selecionados"}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -334,18 +416,16 @@ const captacoesFiltradas = captacoes.filter((cap) => {
               </div>
 
               {/* Info resumida */}
-<div className="space-y-1 text-xs text-slate-600 mb-4">
-  {cap.anosVoleibol && (
-    <p>🏐 {cap.anosVoleibol} anos de voleibol</p>
-  )}
-  {cap.exClubes && <p>🏛️ {cap.exClubes}</p>}
-  {cap.telemovel && <p>📱 {cap.telemovel}</p>}
-  {/* ✅ NOVO */}
-  {cap.encarregadoNome && (
-    <p>👤 Enc.: {cap.encarregadoNome}</p>
-  )}
-</div>
-
+              <div className="space-y-1 text-xs text-slate-600 mb-4">
+                {cap.anosVoleibol && (
+                  <p>🏐 {cap.anosVoleibol} anos de voleibol</p>
+                )}
+                {cap.exClubes && <p>🏛️ {cap.exClubes}</p>}
+                {cap.telemovel && <p>📱 {cap.telemovel}</p>}
+                {cap.encarregadoNome && (
+                  <p>👤 Enc.: {cap.encarregadoNome}</p>
+                )}
+              </div>
 
               {/* Ações */}
               <div className="flex gap-2">
@@ -448,6 +528,7 @@ const captacoesFiltradas = captacoes.filter((cap) => {
                     onChange={(e) => setForm({ ...form, escalao: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
                     required
+                    disabled={permissions.isTreinador && permissions.equipas.length === 1}
                   >
                     <option value="">Selecionar escalão</option>
                     {escaloes.map((esc) => (
@@ -456,6 +537,11 @@ const captacoesFiltradas = captacoes.filter((cap) => {
                       </option>
                     ))}
                   </select>
+                  {permissions.isTreinador && permissions.equipas.length === 1 && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      ℹ️ Só pode criar captações para o seu escalão
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -485,43 +571,41 @@ const captacoesFiltradas = captacoes.filter((cap) => {
                     />
                   </div>
                 </div>
-                {/* Depois do grid com Telemóvel e Email, adiciona isto: */}
 
-{/* Encarregado de Educação */}
-<div className="space-y-3 pt-3 border-t">
-  <h3 className="text-sm font-semibold text-slate-700">
-    Encarregado de Educação
-  </h3>
+                {/* Encarregado de Educação */}
+                <div className="space-y-3 pt-3 border-t">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Encarregado de Educação
+                  </h3>
 
-  <div className="grid grid-cols-2 gap-3">
-    <div>
-      <label className="block text-xs font-medium text-slate-700 mb-1">
-        Nome do Encarregado
-      </label>
-      <input
-        type="text"
-        value={form.encarregadoNome}
-        onChange={(e) => setForm({ ...form, encarregadoNome: e.target.value })}
-        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-        placeholder="Ex: Maria Silva"
-      />
-    </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Nome do Encarregado
+                      </label>
+                      <input
+                        type="text"
+                        value={form.encarregadoNome}
+                        onChange={(e) => setForm({ ...form, encarregadoNome: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
+                        placeholder="Ex: Maria Silva"
+                      />
+                    </div>
 
-    <div>
-      <label className="block text-xs font-medium text-slate-700 mb-1">
-        Telefone do Encarregado
-      </label>
-      <input
-        type="tel"
-        value={form.encarregadoTelefone}
-        onChange={(e) => setForm({ ...form, encarregadoTelefone: e.target.value })}
-        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-        placeholder="912 345 678"
-      />
-    </div>
-  </div>
-</div>
-
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Telefone do Encarregado
+                      </label>
+                      <input
+                        type="tel"
+                        value={form.encarregadoTelefone}
+                        onChange={(e) => setForm({ ...form, encarregadoTelefone: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
+                        placeholder="912 345 678"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Histórico Desportivo */}
@@ -619,11 +703,17 @@ const captacoesFiltradas = captacoes.filter((cap) => {
                     value={form.aprovadoDirecao}
                     onChange={(e) => setForm({ ...form, aprovadoDirecao: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
+                    disabled={permissions.isTreinador}
                   >
                     <option value="pendente">⏳ Pendente</option>
                     <option value="sim">✅ Aprovado</option>
                     <option value="nao">❌ Rejeitado</option>
                   </select>
+                  {permissions.isTreinador && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      ℹ️ Apenas a direção pode aprovar/rejeitar captações
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -743,18 +833,15 @@ const captacoesFiltradas = captacoes.filter((cap) => {
                       </p>
                     </div>
                   )}
-                  {/* Dentro do grid com Idade, Escalão, Telemóvel, Email, adiciona: */}
-
-{captacaoSelecionada.encarregadoNome && (
-  <div className="p-3 bg-slate-50 rounded-lg col-span-2">
-    <p className="text-xs text-slate-500">Encarregado de Educação</p>
-    <p className="font-semibold text-slate-900">{captacaoSelecionada.encarregadoNome}</p>
-    {captacaoSelecionada.encarregadoTelefone && (
-      <p className="text-xs text-slate-600 mt-1">📱 {captacaoSelecionada.encarregadoTelefone}</p>
-    )}
-  </div>
-)}
-
+                  {captacaoSelecionada.encarregadoNome && (
+                    <div className="p-3 bg-slate-50 rounded-lg col-span-2">
+                      <p className="text-xs text-slate-500">Encarregado de Educação</p>
+                      <p className="font-semibold text-slate-900">{captacaoSelecionada.encarregadoNome}</p>
+                      {captacaoSelecionada.encarregadoTelefone && (
+                        <p className="text-xs text-slate-600 mt-1">📱 {captacaoSelecionada.encarregadoTelefone}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

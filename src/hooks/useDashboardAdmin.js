@@ -37,6 +37,8 @@ export function useDashboardAdmin() {
       const atletasSnap = await getDocs(collection(db, 'atletas'));
       const todosAtletas = atletasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+      
+
       // 2. Carregar Escalões
       const escaloesSnap = await getDocs(collection(db, 'escaloes'));
       const todosEscaloes = escaloesSnap.docs.map(d => ({ id: d.id, ...d.data() }));

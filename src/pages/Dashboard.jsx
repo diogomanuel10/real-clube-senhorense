@@ -1,15 +1,18 @@
+// src/pages/Dashboard.jsx (ATUALIZAR)
 import { useDashboard } from '../hooks/useDashboard';
 import WelcomeHeader from '../components/dashboard/WelcomeHeader';
 import DashboardTreinador from './DashboardTreinador';
+import DashboardAdmin from './DashboardAdmin';
+import DashboardFisio from './DashboardFisio'; // <-- ADICIONAR
 import StatsCards from '../components/dashboard/StatsCard';
 import TreinosHoje from '../components/dashboard/TreinosHoje';
 import { usePermissions } from '../hooks/usePermissions';
 import NotificacoesWidget from '../components/dashboard/NotificacoesWidget';
-import ComunicadosWidget from '../components/dashboard/ComunicadosWidget'; // <-- ADICIONAR
+import ComunicadosWidget from '../components/dashboard/ComunicadosWidget';
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function Dashboard({ user }) {
-const permissions = usePermissions(user);
+  const permissions = usePermissions(user);
   const { stats, treinos, escaloes, comunicados, loading } = useDashboard();
   const treinosFiltrados = permissions.filterByEquipa(treinos, 'equipa');
   const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
@@ -22,7 +25,6 @@ const permissions = usePermissions(user);
     return true;
   });
 
- // Enquanto carrega permissões
   if (permissions.loading) {
     return (
       <DashboardLayout user={user}>
@@ -35,22 +37,21 @@ const permissions = usePermissions(user);
       </DashboardLayout>
     );
   }
-   const statsAjustados = permissions.isTreinador ? {
+
+  const statsAjustados = permissions.isTreinador ? {
     ...stats,
-    totalAtletas: stats.totalAtletas, // isto vem do hook, já deve estar filtrado
+    totalAtletas: stats.totalAtletas,
     totalEscaloes: permissions.equipas.length,
   } : stats;
-  
-return (
+
+  return (
     <DashboardLayout user={user}>
       {permissions.isTreinador ? (
         <DashboardTreinador user={user} />
       ) : permissions.isAdmin || permissions.isDirecao ? (
-        // Temporariamente usa o dashboard padrão
-        <div className="p-8">
-          <h1 className="text-2xl font-bold">Dashboard Direção/Admin</h1>
-          <p className="text-slate-600 mt-2">Em desenvolvimento...</p>
-        </div>
+        <DashboardAdmin user={user} /> 
+      ) : permissions.isFisio ? ( 
+        <DashboardFisio user={user} />
       ) : permissions.isAtleta ? (
         <div className="p-8">
           <h1 className="text-2xl font-bold">Dashboard Atleta</h1>
