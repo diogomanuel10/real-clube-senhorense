@@ -41,7 +41,7 @@ export function usePermissions(user) {
   }, [user]);
 
   const canViewEquipa = (equipa) => {
-    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return true; // ✅ Fisio pode ver todas
+    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return true; 
     if (permissions.isTreinador) {
       return permissions.equipas.includes(equipa);
     }
@@ -49,7 +49,7 @@ export function usePermissions(user) {
   };
 
   const filterByEquipa = (items, equipaField = 'equipa') => {
-    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return items; // ✅ Fisio pode ver todas
+    if (permissions.isAdmin || permissions.isDirecao || permissions.isFisio) return items;
     if (permissions.isTreinador) {
       return items.filter(item => permissions.equipas.includes(item[equipaField]));
     }

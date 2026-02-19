@@ -11,7 +11,7 @@ const navItems = [
   
   // 2. Gestão de pessoas (núcleo principal)
   { id: "atletas", label: "Atletas", icon: Users, path: "/atletas", roles: ["admin", "treinador","coordenador","fisio"] },
-  { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes", roles: ["admin", "treinador","coordenador"] },
+  { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes", roles: ["admin","coordenador"] },
   { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes", roles: ["admin", "treinador","coordenador"] },
   
   // 3. Atividades diárias (uso frequente)
@@ -33,7 +33,6 @@ const navItems = [
 export default function DashboardLayout({ children, user }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  console.log("DashboardLayout user:", user);
   // Determinar role do user (adapta conforme a tua estrutura no Firebase)
   const userRole = user?.role || user?.customClaims?.role || "viewer";
 

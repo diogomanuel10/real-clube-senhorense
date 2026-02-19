@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ResponsiveTable from '../components/ResponsiveTable';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   Users,
@@ -179,6 +180,41 @@ export default function Atletas({ user }) {
       observacoes: "",
     });
   };
+
+// Dentro do componente:
+const headers = [
+  { 
+    key: 'numero', 
+    label: '#', 
+    render: (atleta) => (
+      <span className="font-semibold text-[#0b1635]">{atleta.numero}</span>
+    )
+  },
+  { 
+    key: 'nome', 
+    label: 'Nome',
+    render: (atleta) => (
+      <div>
+        <p className="font-medium">{atleta.nome}</p>
+        <p className="text-xs text-slate-500 md:hidden">{atleta.equipa}</p>
+      </div>
+    )
+  },
+  { 
+    key: 'equipa', 
+    label: 'Escalão',
+    hideOnMobile: true // Já aparece no nome em mobile
+  },
+  { 
+    key: 'posicao', 
+    label: 'Posição' 
+  },
+  { 
+    key: 'idade', 
+    label: 'Idade',
+    render: (atleta) => `${atleta.idade || '-'} anos`
+  },
+];
 
   const handleImportCSV = (event) => {
     // VERIFICAR PERMISSÃO
