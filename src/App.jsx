@@ -6,6 +6,9 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./utils/firebase";
 import Dashboard from "./pages/Dashboard";
 import DashboardLayout from "./components/DashboardLayout";
 import Atletas from "./pages/Atletas";
@@ -16,6 +19,7 @@ import Escaloes from "./pages/Escaloes";
 import Presencas from "./pages/Presencas";
 import AtletaPerfil from "./pages/AtletaPerfil";
 import Quotas from "./pages/Quotas";
+import Exercicios from "./pages/ExerciciosSebenta"
 import AdminUsers from "./pages/AdminUsers";
 import Comunicados from "./pages/Comunicados";
 import Equipamentos from "./pages/Equipamentos";
@@ -40,6 +44,16 @@ function AppContent({ user }) {
 
           <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
 
+          <Route
+            path="/admin/utilizadores"
+            element={<AdminUsers user={user} />}
+          />
+
+
+<Route path="quotas" element={
+  <DashboardLayout user={user}>
+                <Quotas user={user} />
+              </DashboardLayout>} />
           <Route
             path="/escaloes"
             element={
@@ -112,6 +126,15 @@ function AppContent({ user }) {
             }
           />
 
+           <Route
+            path="/exercicios"
+            element={
+              <DashboardLayout user={user}>
+                <Exercicios user={user} />
+              </DashboardLayout>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       ) : (
@@ -127,10 +150,15 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600">
-        <div className="text-xl text-white animate-pulse">Carregando...</div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <img
+          src="/logo.png"
+          alt="Real Clube Senhorense"
+          className="h-20 w-20 animate-bounce"
+        />
       </div>
     );
+    
   }
 
   return (

@@ -16,10 +16,10 @@ export default function EscaloesLesoesWidget({ escaloes, loading }) {
   }
 
   const escaloesOrdenados = [...(escaloes || [])].sort(
-    (a, b) => (b.totalLesoes || 0) - (a.totalLesoes || 0)
+    (a, b) => (b.totalEpisodios || 0) - (a.totalEpisodios || 0)
   );
 
-  const maxLesoes = Math.max(...escaloesOrdenados.map((e) => e.totalLesoes || 0), 1);
+  const maxLesoes = Math.max(...escaloesOrdenados.map((e) => e.totalEpisodios || 0), 1);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full">
@@ -47,10 +47,10 @@ export default function EscaloesLesoesWidget({ escaloes, loading }) {
         ) : (
           <div className="space-y-3">
             {escaloesOrdenados.map((esc, idx) => {
-              const totalLesoes = esc.totalLesoes || 0;
-              const lesoesAtivas = esc.lesoesAtivas || 0;
+              const totalEpisodios = esc.totalEpisodios || 0;
+              const episodiosAtivos = esc.episodiosAtivos || 0;
               const totalAtletas = esc.totalAtletas || 0;
-              const pct = maxLesoes > 0 ? (totalLesoes / maxLesoes) * 100 : 0;
+              const pct = maxLesoes > 0 ? (totalEpisodios / maxLesoes) * 100 : 0;
 
               return (
                 <div key={esc.id || esc.nome || idx}>
@@ -69,12 +69,12 @@ export default function EscaloesLesoesWidget({ escaloes, loading }) {
                     </div>
                     <div className="text-right">
                       <span className="text-sm font-bold text-slate-700">
-                        {totalLesoes} lesões
+                        {totalEpisodios} lesões
                       </span>
-                      {lesoesAtivas > 0 && (
+                      {episodiosAtivos > 0 && (
                         <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-semibold flex items-center gap-1 inline-flex">
                           <AlertCircle className="w-3 h-3" />
-                          {lesoesAtivas} ativas
+                          {episodiosAtivos} ativas
                         </span>
                       )}
                     </div>

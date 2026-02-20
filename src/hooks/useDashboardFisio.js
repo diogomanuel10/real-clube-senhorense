@@ -175,16 +175,17 @@ export function useDashboardFisio() {
       setAlertas(alertasMock);
 
       // 11. Definir Estatísticas
-      const atletasComEpisodioAtivo = new Set(ativos.map(e => e.atletaId)).size;
+const atletasComEpisodioAtivo = new Set(ativos.map(e => e.atletaId)).size;
 
-      setStats({
-        totalEpisodios: todosEpisodios.length,
-        episodiosAtivos: ativos.length,
-        episodiosRecuperados: recuperados.length,
-        atletasEmRecuperacao: atletasComEpisodioAtivo,
-        sessoesSemana: sessoesSemana.length,
-        tempoMedioRecuperacao: tempoMedio,
-      });
+setStats({
+  // nomes pensados para os cards
+  totalLesoes: todosEpisodios.length,
+  lesoesAtivas: ativos.length,
+  lesoesRecuperadas: recuperados.length,
+  atletasEmRecuperacao: atletasComEpisodioAtivo,
+  sessoesSemana: sessoesSemana.length,
+  tempoMedioRecuperacao: tempoMedio,
+});
 
     } catch (error) {
       console.error('Erro ao carregar dashboard fisio:', error);

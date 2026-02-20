@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import ResponsiveTable from '../components/ResponsiveTable';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   Users,
@@ -8,7 +7,6 @@ import {
   Edit,
   Trash2,
   Search,
-  Filter,
   ChevronLeft,
   FileText,
 } from "lucide-react";
@@ -78,12 +76,11 @@ export default function Atletas({ user }) {
     try {
       const snap = await getDocs(collection(db, "escaloes"));
       let data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      
-      // FILTRAR ESCALÕES BASEADO NAS PERMISSÕES
+
       if (permissions.isTreinador && permissions.equipas.length > 0) {
-        data = data.filter(esc => permissions.equipas.includes(esc.nome));
+        data = data.filter((esc) => permissions.equipas.includes(esc.nome));
       }
-      
+
       data.sort((a, b) => a.nome.localeCompare(b.nome));
       setEscaloes(data);
     } catch (err) {
@@ -96,21 +93,18 @@ export default function Atletas({ user }) {
       atleta.nome?.toLowerCase().includes(search.toLowerCase()) ||
       atleta.equipa?.toLowerCase().includes(search.toLowerCase());
 
-    const matchEscalao = filtroEscalao
-      ? atleta.equipa === filtroEscalao
-      : true;
+    const matchEscalao = filtroEscalao ? atleta.equipa === filtroEscalao : true;
 
     const matchPermissao = permissions.canViewEquipa(atleta.equipa);
 
     return matchTexto && matchEscalao && matchPermissao;
   });
 
-  const escaloesFiltrados = permissions.filterByEquipa(escaloes, 'nome');
+  const escaloesFiltrados = permissions.filterByEquipa(escaloes, "nome");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // VERIFICAR PERMISSÃO
     if (!permissions.isAdmin && !permissions.isDirecao) {
       alert("Não tem permissão para adicionar/editar atletas");
       return;
@@ -149,7 +143,6 @@ export default function Atletas({ user }) {
   };
 
   const handleDeleteAtleta = async (atletaId) => {
-    // VERIFICAR PERMISSÃO
     if (!permissions.isAdmin && !permissions.isDirecao) {
       alert("Não tem permissão para apagar atletas");
       return;
@@ -217,7 +210,6 @@ const headers = [
 ];
 
   const handleImportCSV = (event) => {
-    // VERIFICAR PERMISSÃO
     if (!permissions.isAdmin && !permissions.isDirecao) {
       alert("Não tem permissão para importar atletas");
       event.target.value = "";
@@ -266,7 +258,10 @@ const headers = [
                   "",
               },
               observacoes:
-                row.observacoes || row.Observacoes || row["Observações"] || "",
+                row.observacoes ||
+                row.Observacoes ||
+                row["Observações"] ||
+                "",
             };
 
             if (atletaData.nome) {
@@ -295,7 +290,6 @@ const headers = [
   };
 
   const abrirModalAdicionar = () => {
-    // VERIFICAR PERMISSÃO
     if (!permissions.isAdmin && !permissions.isDirecao) {
       alert("Não tem permissão para adicionar atletas");
       return;
@@ -307,9 +301,8 @@ const headers = [
   };
 
   const abrirModalEditar = (atleta, e) => {
-    e.stopPropagation(); // Prevenir navegação para o perfil
+    e.stopPropagation();
 
-    // VERIFICAR PERMISSÃO
     if (!permissions.isAdmin && !permissions.isDirecao) {
       alert("Não tem permissão para editar atletas");
       return;
@@ -330,7 +323,6 @@ const headers = [
     setShowAddModal(true);
   };
 
-  // Loading inicial de permissões
   if (permissions.loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -341,9 +333,10 @@ const headers = [
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      {/* HEADER RESPONSIVO */}
+      <header className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center space-x-3 sm:space-x-4">
             <button
               onClick={() => navigate("/")}
               className="p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100"
@@ -351,21 +344,23 @@ const headers = [
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Atletas</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Atletas
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-600">
                 {filteredAtletas.length} de {atletas.length} atletas
                 {permissions.isTreinador && (
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                    {permissions.equipas.length} equipa{permissions.equipas.length > 1 ? 's' : ''}
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] sm:text-xs rounded-full">
+                    {permissions.equipas.length} equipa
+                    {permissions.equipas.length > 1 ? "s" : ""}
                   </span>
                 )}
               </p>
             </div>
           </div>
 
-          {/* BOTÕES APENAS PARA ADMIN/DIREÇÃO */}
           {(permissions.isAdmin || permissions.isDirecao) && (
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <div>
                 <input
                   id="import-csv-input"
@@ -378,7 +373,7 @@ const headers = [
                   onClick={() =>
                     document.getElementById("import-csv-input").click()
                   }
-                  className="btn-primary"
+                  className="btn-primary w-full sm:w-auto text-sm"
                   disabled={importing}
                 >
                   <FileText className="w-4 h-4" />
@@ -390,7 +385,7 @@ const headers = [
 
               <button
                 onClick={abrirModalAdicionar}
-                className="btn-primary"
+                className="btn-primary w-full sm:w-auto text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar Atleta
@@ -400,25 +395,27 @@ const headers = [
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative basis-2/3 w-full">
+      {/* MAIN */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* FILTROS RESPONSIVOS */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center">
+            <div className="relative md:basis-2/3 w-full">
               <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
                 placeholder="Procurar por nome ou equipa..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
-            <div className="basis-1/3 w-full">
+            <div className="md:basis-1/3 w-full">
               <select
                 value={filtroEscalao}
                 onChange={(e) => setFiltroEscalao(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Todos os escalões</option>
                 {escaloesFiltrados.map((esc) => (
@@ -431,6 +428,7 @@ const headers = [
           </div>
         </div>
 
+        {/* LISTA / GRID DE ATLETAS */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -448,15 +446,15 @@ const headers = [
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {filteredAtletas.map((atleta) => (
               <div
                 key={atleta.id}
                 onClick={() => navigate(`/atletas/${atleta.id}`)}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer"
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div className="flex items-center gap-3">
                       {atleta.fotoUrl ? (
                         <img
@@ -470,18 +468,17 @@ const headers = [
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900 line-clamp-1">
                           {atleta.nome || "Sem nome"}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 line-clamp-1">
                           {atleta.equipa || "Sem equipa"}
                         </span>
                       </div>
                     </div>
 
-                    {/* BOTÕES DE AÇÃO APENAS PARA ADMIN/DIREÇÃO */}
                     {(permissions.isAdmin || permissions.isDirecao) && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <button
                           onClick={(e) => abrirModalEditar(atleta, e)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -503,72 +500,72 @@ const headers = [
                     )}
                   </div>
 
-                  <div className="space-y-2 mb-6">
+                  <div className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-6 text-xs sm:text-sm">
                     {atleta.idade && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">Idade:</span>
-                        <span className="text-blue-600 truncate text-xs">
+                        <span className="text-blue-600 truncate text-xs sm:text-sm">
                           {atleta.idade}
                         </span>
                       </div>
                     )}
                     {atleta.posicao && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">Posição:</span>
-                        <span className="text-blue-600 truncate text-xs">
+                        <span className="text-blue-600 truncate text-xs sm:text-sm">
                           {atleta.posicao}
                         </span>
                       </div>
                     )}
                     {atleta.telefone && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">Telemóvel:</span>
-                        <span className="text-blue-600 truncate text-xs">
+                        <span className="text-blue-600 truncate text-xs sm:text-sm">
                           {atleta.telefone}
                         </span>
                       </div>
                     )}
                     {atleta.email && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">Email:</span>
-                        <span className="text-blue-600 truncate text-xs">
+                        <span className="text-blue-600 truncate text-xs sm:text-sm">
                           {atleta.email}
                         </span>
                       </div>
                     )}
                     {atleta.documentos?.cc && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">CC:</span>
-                        <span className="font-mono text-xs">
+                        <span className="font-mono text-[11px] sm:text-xs">
                           {atleta.documentos.cc}
                         </span>
                       </div>
                     )}
                     {atleta.documentos?.exameMedico && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <span className="w-24 text-gray-500">Exame:</span>
-                        <span className="text-xs">
+                        <span className="text-[11px] sm:text-xs">
                           {atleta.documentos.exameMedico}
                         </span>
                       </div>
                     )}
                     {atleta.observacoes && (
-                      <div className="flex items-start text-sm mt-3 pt-3 border-t border-gray-100">
-                        <span className="w-24 text-gray-500 flex-shrink-0">
+                      <div className="flex items-start mt-3 pt-3 border-t border-gray-100">
+                        <span className="w-24 text-gray-500 flex-shrink-0 text-xs sm:text-sm">
                           Obs:
                         </span>
-                        <span className="text-xs text-gray-600 line-clamp-2">
+                        <span className="text-[11px] sm:text-xs text-gray-600 line-clamp-2">
                           {atleta.observacoes}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                  <div className="flex flex-wrap gap-2 pt-3 sm:pt-4 border-t border-gray-100">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-[11px] sm:text-xs font-medium rounded-full">
                       {atleta.equipa || "Sem equipa"}
                     </span>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                    <span className="px-3 py-1 bg-green-100 text-green-800 text-[11px] sm:text-xs font-medium rounded-full">
                       {atleta.posicao || "Sem posição"}
                     </span>
                   </div>
@@ -579,24 +576,24 @@ const headers = [
         )}
       </main>
 
-      {/* MODAL ADICIONAR/EDITAR */}
+      {/* MODAL ADICIONAR/EDITAR RESPONSIVO */}
       {showAddModal && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center p-3 sm:p-4 z-50"
           onClick={() => setShowAddModal(false)}
         >
           <div
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="bg-white rounded-2xl w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-2xl">
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 {editingAtleta ? "Editar Atleta" : "Adicionar Atleta"}
               </h2>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome Completo *
@@ -604,8 +601,10 @@ const headers = [
                   <input
                     type="text"
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     required
                   />
                 </div>
@@ -617,8 +616,10 @@ const headers = [
                   <input
                     type="number"
                     value={formData.idade}
-                    onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, idade: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     required
                   />
                 </div>
@@ -629,8 +630,10 @@ const headers = [
                   </label>
                   <select
                     value={formData.equipa}
-                    onChange={(e) => setFormData({ ...formData, equipa: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, equipa: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     required
                   >
                     <option value="">Selecionar equipa</option>
@@ -649,8 +652,10 @@ const headers = [
                   <input
                     type="text"
                     value={formData.posicao}
-                    onChange={(e) => setFormData({ ...formData, posicao: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, posicao: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
 
@@ -661,8 +666,10 @@ const headers = [
                   <input
                     type="tel"
                     value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, telefone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
 
@@ -673,20 +680,24 @@ const headers = [
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     URL da Foto
                   </label>
                   <input
                     type="url"
                     value={formData.fotoUrl}
-                    onChange={(e) => setFormData({ ...formData, fotoUrl: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({ ...formData, fotoUrl: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     placeholder="https://exemplo.com/foto.jpg"
                   />
                 </div>
@@ -701,10 +712,13 @@ const headers = [
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        documentos: { ...formData.documentos, cc: e.target.value },
+                        documentos: {
+                          ...formData.documentos,
+                          cc: e.target.value,
+                        },
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
 
@@ -718,37 +732,45 @@ const headers = [
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        documentos: { ...formData.documentos, exameMedico: e.target.value },
+                        documentos: {
+                          ...formData.documentos,
+                          exameMedico: e.target.value,
+                        },
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Observações
                   </label>
                   <textarea
                     value={formData.observacoes}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        observacoes: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     rows={3}
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="w-full sm:flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                 >
                   {editingAtleta ? "Guardar Alterações" : "Adicionar Atleta"}
                 </button>
