@@ -135,7 +135,7 @@ const SessaoTreinoForm = ({ atleta, onClose, onSuccess }) => {
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           
           {/* Informações Gerais */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data *</label>
               <input
@@ -190,8 +190,8 @@ const SessaoTreinoForm = ({ atleta, onClose, onSuccess }) => {
             <div className="space-y-3">
               {formData.exercicios.map((exercicio, index) => (
                 <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                    <div className="md:col-span-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-3">
+                    <div className="col-span-2 sm:col-span-2">
                       <label className="block text-xs text-gray-500 mb-1">Nome do Exercício</label>
                       <input
                         type="text"
@@ -278,7 +278,7 @@ const SessaoTreinoForm = ({ atleta, onClose, onSuccess }) => {
           {/* Bem-Estar */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Bem-Estar e Prontidão</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm text-gray-700 mb-2">
                   Qualidade do Sono (1-5): <span className="font-semibold">{formData.bemEstar.sono}</span>
@@ -395,19 +395,11 @@ const SessaoTreinoForm = ({ atleta, onClose, onSuccess }) => {
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          >
+       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 bg-gray-50 sticky bottom-0">
+          <button type="button" onClick={onClose} className="w-full sm:w-auto px-4 py-2 ...">
             Cancelar
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-          >
+         <button onClick={handleSubmit} className="w-full sm:w-auto px-4 py-2 ...">
             {loading ? 'A guardar...' : 'Guardar Sessão'}
           </button>
         </div>

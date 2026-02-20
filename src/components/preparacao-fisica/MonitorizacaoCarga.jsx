@@ -132,7 +132,7 @@ const MonitorizacaoCarga = ({ atletaId }) => {
   return (
     <div className="space-y-6">
       {/* Filtro de Período */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h3 className="text-lg font-semibold text-gray-900">Monitorização de Carga</h3>
         <select
           value={periodo}
@@ -154,7 +154,7 @@ const MonitorizacaoCarga = ({ atletaId }) => {
       ) : (
         <>
           {/* Cards de Métricas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
               <h4 className="text-sm font-medium text-gray-500 mb-2">Carga Aguda (7 dias)</h4>
               <p className="text-3xl font-bold text-blue-600">{calcularCargaAguda()}</p>
@@ -207,7 +207,7 @@ const MonitorizacaoCarga = ({ atletaId }) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Indicadores de Bem-Estar</h3>
             
             {/* Médias */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Sono Médio</p>
                 <p className="text-2xl font-bold text-blue-600">{mediaBemEstar.sono}/5</p>

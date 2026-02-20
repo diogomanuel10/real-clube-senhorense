@@ -87,7 +87,7 @@ const HistoricoAvaliacoes = ({ atletaId, onSelectAvaliacao }) => {
             key={avaliacao.id}
             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
           >
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   {avaliacao.data?.toLocaleDateString('pt-PT', { 
@@ -113,7 +113,7 @@ const HistoricoAvaliacoes = ({ atletaId, onSelectAvaliacao }) => {
             </div>
 
             {/* Antropometria */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Peso</p>
                 <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ const HistoricoAvaliacoes = ({ atletaId, onSelectAvaliacao }) => {
             </div>
 
             {/* Testes Destacados */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-4 border-t">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Salto Vertical</p>
                 <div className="flex items-center gap-2">

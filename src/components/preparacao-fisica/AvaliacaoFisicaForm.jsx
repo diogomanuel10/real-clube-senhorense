@@ -6,9 +6,9 @@ import { db } from "../../utils/firebase";
 const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('antropometria');
-  
+
   const [formData, setFormData] = useState({
-    // Antropometria
+
     peso: '',
     altura: '',
     massaGorda: '',
@@ -22,8 +22,8 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
       bracoEsquerdo: '',
       bracoDireito: ''
     },
-    
-    // Testes de Força
+
+
     testesForça: {
       pesoMorto1RM: '',
       agachamento1RM: '',
@@ -37,8 +37,8 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
       pranchaLateralEsquerda: '',
       pranchaLateralDireita: ''
     },
-    
-    // Velocidade e Agilidade
+
+
     testesVelocidade: {
       sprint10m: '',
       sprint20m: '',
@@ -47,7 +47,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
       deslocamentoLateral5m: '',
       aceleracaoParaBloqueio: ''
     },
-    
+
     // Resistência
     testesResistencia: {
       yoYoIntermittent: '',
@@ -57,7 +57,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
       fc1minDepois: '',
       fc2minDepois: ''
     },
-    
+
     // Flexibilidade
     testesFlexibilidade: {
       sitAndReach: '',
@@ -71,7 +71,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
       agachamentoProfundo: '',
       overheadSquat: ''
     },
-    
+
     observacoes: '',
     proximaAvaliacao: ''
   });
@@ -110,7 +110,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
         atletaId: atleta.id,
         atletaNome: atleta.nome,
         data: serverTimestamp(),
-        
+
         antropometria: {
           peso: parseFloat(formData.peso) || null,
           altura: parseFloat(formData.altura) || null,
@@ -127,7 +127,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
             bracoDireito: parseFloat(formData.perimetros.bracoDireito) || null
           }
         },
-        
+
         testesForça: {
           pesoMorto1RM: parseFloat(formData.testesForça.pesoMorto1RM) || null,
           agachamento1RM: parseFloat(formData.testesForça.agachamento1RM) || null,
@@ -145,7 +145,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
             direita: parseFloat(formData.testesForça.pranchaLateralDireita) || null
           }
         },
-        
+
         testesVelocidade: {
           sprint10m: parseFloat(formData.testesVelocidade.sprint10m) || null,
           sprint20m: parseFloat(formData.testesVelocidade.sprint20m) || null,
@@ -154,7 +154,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
           deslocamentoLateral5m: parseFloat(formData.testesVelocidade.deslocamentoLateral5m) || null,
           aceleracaoParaBloqueio: parseFloat(formData.testesVelocidade.aceleracaoParaBloqueio) || null
         },
-        
+
         testesResistencia: {
           yoYoIntermittent: parseFloat(formData.testesResistencia.yoYoIntermittent) || null,
           cooperTest: parseFloat(formData.testesResistencia.cooperTest) || null,
@@ -165,7 +165,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
             fc2minDepois: parseFloat(formData.testesResistencia.fc2minDepois) || null
           }
         },
-        
+
         testesFlexibilidade: {
           sitAndReach: parseFloat(formData.testesFlexibilidade.sitAndReach) || null,
           mobilidadeOmbros: {
@@ -182,14 +182,14 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
           agachamentoProfundo: formData.testesFlexibilidade.agachamentoProfundo || null,
           overheadSquat: formData.testesFlexibilidade.overheadSquat || null
         },
-        
+
         observacoes: formData.observacoes,
         proximaAvaliacao: formData.proximaAvaliacao ? new Date(formData.proximaAvaliacao) : null,
         criadoEm: serverTimestamp()
       };
 
       await addDoc(collection(db, 'avaliacoes_fisicas'), avaliacaoData);
-      
+
       if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
@@ -209,10 +209,10 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-stretch sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white w-full h-full sm:h-auto sm:max-w-4xl sm:rounded-lg sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
+        <div className="flex justify-between items-start p-4 sm:p-6 border-b flex-shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Nova Avaliação Física</h2>
             <p className="text-sm text-gray-500 mt-1">{atleta.nome} - {new Date().toLocaleDateString('pt-PT')}</p>
@@ -226,16 +226,15 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b bg-gray-50 px-6 overflow-x-auto">
+        <div className="flex border-b bg-gray-50 px-2 sm:px-6 overflow-x-auto no-scrollbar flex-shrink-0">
           {sections.map(section => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeSection === section.id
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${activeSection === section.id
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               {section.label}
             </button>
@@ -243,12 +242,15 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-4 sm:p-6"
+        >
+
           {/* Antropometria */}
           {activeSection === 'antropometria' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Peso (kg) *
@@ -262,7 +264,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Altura (cm) *
@@ -276,7 +278,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     IMC
@@ -288,7 +290,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     % Massa Gorda
@@ -305,7 +307,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
 
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Perímetros (cm)</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Peitoral</label>
                     <input
@@ -316,7 +318,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cintura</label>
                     <input
@@ -327,7 +329,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Anca</label>
                     <input
@@ -338,7 +340,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Coxa Esquerda</label>
                     <input
@@ -349,7 +351,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Coxa Direita</label>
                     <input
@@ -360,7 +362,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Braço Esquerdo</label>
                     <input
@@ -371,7 +373,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Braço Direito</label>
                     <input
@@ -403,7 +405,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Agachamento (kg)</label>
                     <input
@@ -414,7 +416,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Supino Reto (kg)</label>
                     <input
@@ -441,7 +443,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Aperto Mão Direita (kg)</label>
                     <input
@@ -452,7 +454,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Medicine Ball Throw (m)</label>
                     <input
@@ -479,7 +481,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Salto c/ Aproximação (cm)</label>
                     <input
@@ -505,7 +507,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prancha Lateral Esq (seg)</label>
                     <input
@@ -515,7 +517,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prancha Lateral Dir (seg)</label>
                     <input
@@ -546,7 +548,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Sprint 20m (seg)</label>
                     <input
@@ -573,7 +575,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Illinois Test (seg)</label>
                     <input
@@ -600,7 +602,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Aceleração p/ Bloqueio (seg)</label>
                     <input
@@ -631,7 +633,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Teste de Cooper (m em 12min)</label>
                     <input
@@ -669,7 +671,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">FC 1min depois (bpm)</label>
                     <input
@@ -679,7 +681,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">FC 2min depois (bpm)</label>
                     <input
@@ -723,7 +725,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Rotação Interna</label>
                     <input
@@ -733,7 +735,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Flexão</label>
                     <input
@@ -743,7 +745,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Abdução</label>
                     <input
@@ -768,7 +770,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Extensão</label>
                     <input
@@ -778,7 +780,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Rotação Externa</label>
                     <input
@@ -806,7 +808,7 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
                       <option value="Não Passa">Não Passa</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Overhead Squat - Observações</label>
                     <input
@@ -852,18 +854,19 @@ const AvaliacaoFisicaForm = ({ atleta, onClose, onSuccess }) => {
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
           <button
-            onClick={handleSubmit}
-            disabled={loading || !formData.peso || !formData.altura}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            type="submit"
+            form="" // ou remove se já usas onSubmit no form
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={loading}
           >
             {loading ? 'A guardar...' : 'Guardar Avaliação'}
           </button>
