@@ -131,21 +131,43 @@ export default function AtletaPerfil({ user }) {
       }
     };
 
-    const fetchPresencasAtleta = async () => {
-      try {
-        const qPres = query(
-          collection(db, "presencas"),
-          where("atletaId", "==", id),
-        );
-        const snap = await getDocs(qPres);
-        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setPresencasAtleta(lista);
-      } catch (err) {
-        console.error("Erro ao carregar presenças do atleta:", err);
-      } finally {
-        setLoadingPresencas(false);
-      }
-    };
+const fetchPresencasAtleta = async () => {
+  try {
+    const qPres = query(
+      collection(db, "presencas"),
+      where("atletaId", "==", id),
+      orderBy("createdAt", "desc")
+    );
+
+    const snap = await getDocs(qPres);
+
+    const lista = await Promise.all(
+      snap.docs.map(async (d) => {
+        const data = d.data();
+        let treino = null;
+
+        if (data.treinoId) {
+          const treinoSnap = await getDoc(doc(db, "treinos", data.treinoId));
+          if (treinoSnap.exists()) {
+            treino = { id: treinoSnap.id, ...treinoSnap.data() };
+          }
+        }
+
+        return {
+          id: d.id,
+          ...data,
+          treino,
+        };
+      })
+    );
+
+    setPresencasAtleta(lista);
+  } catch (err) {
+    console.error("Erro ao carregar presenças do atleta:", err);
+  } finally {
+    setLoadingPresencas(false);
+  }
+};
 
     fetchAtleta();
     fetchEpisodios();
@@ -1119,75 +1141,72 @@ export default function AtletaPerfil({ user }) {
 )}
 
           {/* TAB PRESENÇAS */}
-          {tab === "presencas" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Presenças em treinos
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    Histórico de presenças, faltas e justificações desta
-                    atleta.
-                  </p>
-                </div>
+       {tab === "presencas" && (
+  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
+    <div>
+      <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+        Presenças em treinos
+      </h2>
+      <p className="text-xs sm:text-sm text-gray-600">
+        Histórico de presenças, faltas e justificações desta atleta.
+      </p>
+    </div>
+
+    {loadingPresencas ? (
+      <p className="text-sm text-slate-500">A carregar presenças...</p>
+    ) : presencasAtleta.length === 0 ? (
+      <p className="text-sm text-slate-500">
+        Ainda não existem registos de presenças para esta atleta.
+      </p>
+    ) : (
+      <div className="space-y-2">
+        {presencasAtleta.map((p) => {
+          const dataTreino =
+            p.treino?.dataTreino ||
+            (p.createdAt?.toDate ? p.createdAt.toDate() : null);
+
+          return (
+            <div
+              key={p.id}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2"
+            >
+              <div>
+                <p className="text-sm font-medium text-slate-900">
+                 Treino
+                </p>
+                <p className="text-[11px] sm:text-xs text-slate-500">
+                  {dataTreino
+                    ? new Date(dataTreino).toLocaleString("pt-PT", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })
+                    : "Sem data registada"}
+                </p>
               </div>
 
-              {loadingPresencas ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-6">
-                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                  A carregar presenças...
-                </div>
-              ) : presencasAtleta.length === 0 ? (
-                <p className="text-sm text-slate-500">
-                  Ainda não existem registos de presenças para esta atleta.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {presencasAtleta
-                    .slice()
-                    .sort((a, b) =>
-                      (b.data || "").localeCompare(a.data || ""),
-                    )
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            Treino: {p.treinoId}
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-slate-500">
-                            {p.data
-                              ? new Date(p.data).toLocaleString("pt-PT", {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              })
-                              : "Sem data registada"}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${p.estado === "presente"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : p.estado === "falta"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                        >
-                          {p.estado === "presente"
-                            ? "Presente"
-                            : p.estado === "falta"
-                              ? "Falta"
-                              : "Justificada"}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              )}
+              <span
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                  p.estado === "presente"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : p.estado === "falta"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {p.estado === "presente"
+                  ? "Presente"
+                  : p.estado === "falta"
+                  ? "Falta"
+                  : "Justificada"}
+              </span>
             </div>
-          )}
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
+
         </main>
       </div>
     </DashboardLayout>
