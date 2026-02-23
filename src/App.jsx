@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
+import { Toaster } from 'react-hot-toast';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
+import JogoLive from './pages/JogoLive';
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./utils/firebase";
 import Dashboard from "./pages/Dashboard";
+import JogoEstatisticas from './pages/JogoEstatisticas';
+import Jogos from './pages/Jogos';
 import DashboardLayout from "./components/DashboardLayout";
 import Atletas from "./pages/Atletas";
 import Captacoes from "./pages/Captacoes";
@@ -22,15 +26,18 @@ import Quotas from "./pages/Quotas";
 import Exercicios from "./pages/ExerciciosSebenta"
 import AdminUsers from "./pages/AdminUsers";
 import Comunicados from "./pages/Comunicados";
+import FirebaseMonitoring from './pages/FirebaseMonitoring';
 import Equipamentos from "./pages/Equipamentos";
 
 import "./styles/globals.css";
 
 function AppContent({ user }) {
   return (
+
     <Routes>
       {user ? (
         <>
+
           <Route path="/" element={<Dashboard user={user} />} />
 
           <Route
@@ -50,10 +57,10 @@ function AppContent({ user }) {
           />
 
 
-<Route path="quotas" element={
-  <DashboardLayout user={user}>
-                <Quotas user={user} />
-              </DashboardLayout>} />
+          <Route path="quotas" element={
+            <DashboardLayout user={user}>
+              <Quotas user={user} />
+            </DashboardLayout>} />
           <Route
             path="/escaloes"
             element={
@@ -62,6 +69,8 @@ function AppContent({ user }) {
               </DashboardLayout>
             }
           />
+
+          <Route path="/jogos" element={<DashboardLayout user={user}><Jogos user={user} /></DashboardLayout>} />
 
           <Route
             path="/treinos"
@@ -72,6 +81,8 @@ function AppContent({ user }) {
             }
           />
 
+<Route path="/jogos/:jogoId/estatisticas" element={<DashboardLayout user={user}><JogoEstatisticas user={user} /></DashboardLayout>} />
+<Route path="/jogos/:jogoId/live" element={<DashboardLayout user={user}><JogoLive user={user} /></DashboardLayout>} />
           <Route
             path="/presencas"
             element={
@@ -126,13 +137,18 @@ function AppContent({ user }) {
             }
           />
 
-           <Route
+          <Route
             path="/exercicios"
             element={
               <DashboardLayout user={user}>
                 <Exercicios user={user} />
               </DashboardLayout>
             }
+          />
+
+          <Route
+            path="/firebase-monitoring"
+            element={ <DashboardLayout user={user}><FirebaseMonitoring user={user} /></DashboardLayout>}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -158,7 +174,7 @@ function App() {
         />
       </div>
     );
-    
+
   }
 
   return (

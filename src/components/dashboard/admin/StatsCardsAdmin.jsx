@@ -20,6 +20,15 @@ export default function StatsCardsAdmin({ stats, loading }) {
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
     },
+     {
+      titulo: 'Treinadores',
+      valor: stats.totalTreinadores,
+      icone: Activity,
+      cor: 'from-indigo-500 to-indigo-600',
+      bg: 'bg-indigo-50',
+      iconBg: 'bg-indigo-100',
+      iconColor: 'text-indigo-600',
+    },
     {
       titulo: 'Assiduidade Geral',
       valor: `${stats.taxaAssiduidadeGeral}%`,
@@ -29,25 +38,6 @@ export default function StatsCardsAdmin({ stats, loading }) {
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600',
       subtitulo: 'Últimos 30 dias',
-    },
-    {
-      titulo: 'Receita Mensal',
-      valor: `${stats.receitaMensal}€`,
-      icone: DollarSign,
-      cor: 'from-amber-500 to-amber-600',
-      bg: 'bg-amber-50',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      subtitulo: 'Este mês',
-    },
-    {
-      titulo: 'Treinos (7 dias)',
-      valor: stats.treinosSemana,
-      icone: Calendar,
-      cor: 'from-cyan-500 to-cyan-600',
-      bg: 'bg-cyan-50',
-      iconBg: 'bg-cyan-100',
-      iconColor: 'text-cyan-600',
     },
     {
       titulo: 'Quotas Pagas',
@@ -66,15 +56,6 @@ export default function StatsCardsAdmin({ stats, loading }) {
       bg: 'bg-red-50',
       iconBg: 'bg-red-100',
       iconColor: 'text-red-600',
-    },
-    {
-      titulo: 'Treinadores',
-      valor: stats.totalTreinadores,
-      icone: Activity,
-      cor: 'from-indigo-500 to-indigo-600',
-      bg: 'bg-indigo-50',
-      iconBg: 'bg-indigo-100',
-      iconColor: 'text-indigo-600',
     },
   ];
 
