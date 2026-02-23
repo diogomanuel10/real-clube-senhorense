@@ -50,11 +50,13 @@ export default function Jogos({ user }) {
     local: 'Casa',
     competicao: 'Campeonato',
     estado: 'agendado',
+    videoUrl: '',
     resultado: {
       nos: 0,
       adversario: 0,
       sets: '',
     },
+
   });
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function Jogos({ user }) {
     setLoading(true);
     try {
       let q;
-      
+
       if (permissions.isTreinador && permissions.equipas.length > 0) {
         q = query(
           collection(db, 'jogos'),
@@ -85,7 +87,7 @@ export default function Jogos({ user }) {
         ...doc.data(),
         data: doc.data().data?.toDate ? doc.data().data.toDate() : new Date(doc.data().data),
       }));
-      
+
       setJogos(data);
     } catch (error) {
       console.error('Erro ao carregar jogos:', error);
@@ -110,97 +112,96 @@ export default function Jogos({ user }) {
       console.error('Erro ao carregar escalões:', err);
       toast.error('Erro ao carregar escalões');
     }
-  };
-
-  const handleSubmit = async (e) => {
+  }; const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!permissions.isAdmin && !permissions.isDirecao && !permissions.isTreinador) {
-      toast.error('Não tem permissão para criar jogos');
+    if (!formData.adversario || !formData.data || !formData.equipa) {
+      toast.error('Preenche os campos obrigatórios');
       return;
     }
 
-    if (permissions.isTreinador && !permissions.equipas.includes(formData.equipa)) {
-      toast.error('Não pode criar jogos para esta equipa');
-      return;
-    }
-
-    const loadingToast = toast.loading(
-      editingJogo ? 'A atualizar jogo...' : 'A criar jogo...'
-    );
+    const loadingToast = toast.loading(editingJogo ? 'A atualizar...' : 'A criar jogo...');
 
     try {
-      const dataHora = new Date(`${formData.data}T${formData.hora}`);
+      const dataCompleta = new Date(`${formData.data}T${formData.hora || '00:00'}`);
 
       const jogoData = {
-        data: Timestamp.fromDate(dataHora),
-        equipa: formData.equipa,
         adversario: formData.adversario,
         local: formData.local,
-        competicao: formData.competicao,
-        estado: formData.estado,
-        resultado: formData.resultado,
+        data: Timestamp.fromDate(dataCompleta),
+        tipo: formData.tipo,
+        equipa: formData.equipa,
+        videoUrl: formData.videoUrl || null, // ← ADICIONA AQUI
+        resultado: formData.resultado || { nos: 0, adversario: 0 },
+        estado: 'agendado',
         updatedAt: Timestamp.now(),
       };
 
       if (editingJogo) {
-        const ref = doc(db, 'jogos', editingJogo.id);
-        await updateDoc(ref, jogoData);
+        await updateDoc(doc(db, 'jogos', editingJogo.id), jogoData);
         toast.success('Jogo atualizado!', { id: loadingToast });
       } else {
         await addDoc(collection(db, 'jogos'), {
           ...jogoData,
-          createdBy: user.uid,
           createdAt: Timestamp.now(),
         });
         toast.success('Jogo criado!', { id: loadingToast });
       }
 
-      setShowAddModal(false);
+      setShowModal(false);
+      setFormData({
+        adversario: '',
+        local: '',
+        data: '',
+        hora: '',
+        tipo: 'Amigável',
+        equipa: '',
+        videoUrl: '', // ← RESET AQUI
+      });
       setEditingJogo(null);
-      resetForm();
       loadJogos();
     } catch (error) {
-      console.error('Erro ao guardar jogo:', error);
-      toast.error('Erro: ' + error.message, { id: loadingToast });
+      console.error('Erro:', error);
+      toast.error('Erro ao guardar jogo', { id: loadingToast });
     }
   };
 
-const handleDeleteJogo = async (jogoId, equipa) => {
-  if (!permissions.isAdmin && !permissions.isDirecao) {
-    alert('Não tem permissão para eliminar jogos');
-    return;
-  }
 
-  if (permissions.isTreinador && !permissions.equipas.includes(equipa)) {
-    alert('Não pode eliminar jogos de outras equipas');
-    return;
-  }
-
-  if (!confirm('Tens a certeza? As estatísticas deste jogo também serão eliminadas.')) {
-    return;
-  }
-
-  const loadingToast = toast.loading('A eliminar jogo...');
-  try {
-    const statsQuery = query(
-      collection(db, 'estatisticas_jogo'),
-      where('jogoId', '==', jogoId)
-    );
-    const statsSnap = await getDocs(statsQuery);
-    
-    for (const statDoc of statsSnap.docs) {
-      await deleteDoc(doc(db, 'estatisticas_jogo', statDoc.id));
+  const handleDeleteJogo = async (jogoId, equipa) => {
+    if (!permissions.isAdmin && !permissions.isDirecao) {
+      alert('Não tem permissão para eliminar jogos');
+      return;
     }
 
-    await deleteDoc(doc(db, 'jogos', jogoId));
-    toast.success('Jogo eliminado!', { id: loadingToast });
-    loadJogos();
-  } catch (error) {
-    console.error('Erro ao eliminar:', error);
-    toast.error('Erro ao eliminar', { id: loadingToast });
-  }
-};
+    if (permissions.isTreinador && !permissions.equipas.includes(equipa)) {
+      alert('Não pode eliminar jogos de outras equipas');
+      return;
+    }
+
+    if (!confirm('Tens a certeza? As estatísticas deste jogo também serão eliminadas.')) {
+      return;
+    }
+
+    const loadingToast = toast.loading('A eliminar jogo...');
+    try {
+      const statsQuery = query(
+        collection(db, 'estatisticas_jogo'),
+        where('jogoId', '==', jogoId)
+      );
+      const statsSnap = await getDocs(statsQuery);
+
+      for (const statDoc of statsSnap.docs) {
+        await deleteDoc(doc(db, 'estatisticas_jogo', statDoc.id));
+      }
+
+      await deleteDoc(doc(db, 'jogos', jogoId));
+      toast.success('Jogo eliminado!', { id: loadingToast });
+      loadJogos();
+    } catch (error) {
+      console.error('Erro ao eliminar:', error);
+      toast.error('Erro ao eliminar', { id: loadingToast });
+    }
+  };
 
 
   const resetForm = () => {
@@ -250,6 +251,7 @@ const handleDeleteJogo = async (jogoId, equipa) => {
       data: dataJogo.toISOString().split('T')[0],
       hora: dataJogo.toTimeString().slice(0, 5),
       equipa: jogo.equipa || '',
+      videoUrl: jogo.videoUrl || '',
       adversario: jogo.adversario || '',
       local: jogo.local || 'Casa',
       competicao: jogo.competicao || 'Campeonato',
@@ -386,6 +388,8 @@ const handleDeleteJogo = async (jogoId, equipa) => {
               <option value="finalizado">Finalizado</option>
               <option value="cancelado">Cancelado</option>
             </select>
+
+
           </div>
         </div>
 
@@ -408,81 +412,103 @@ const handleDeleteJogo = async (jogoId, equipa) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {filteredJogos.map((jogo) => (
-              <div
-                key={jogo.id}
-                onClick={() => navigate(`/jogos/${jogo.id}/live`)}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+          {filteredJogos.map((jogo) => (
+  <div
+    key={jogo.id}
+    className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden"
+  >
+    {/* CONTEÚDO PRINCIPAL - Clicável para ir para Live */}
+    <div
+      onClick={() => navigate(`/jogos/${jogo.id}/live`)}
+      className="p-6 cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-600">
+              {formatData(jogo.data)}
+            </span>
+            {getEstadoBadge(jogo.estado)}
+          </div>
+          <div className="flex items-center gap-3">
+            <MapPin className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-600">
+              {jogo.local} • {jogo.competicao}
+            </span>
+          </div>
+        </div>
+
+        {(permissions.isAdmin || permissions.isDirecao ||
+          (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => abrirModalEditar(jogo, e)}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-600">
-                          {formatData(jogo.data)}
-                        </span>
-                        {getEstadoBadge(jogo.estado)}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {jogo.local} • {jogo.competicao}
-                        </span>
-                      </div>
-                    </div>
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteJogo(jogo.id, jogo.equipa);
+                }}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+      </div>
 
-                    {(permissions.isAdmin || permissions.isDirecao || 
-                      (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => abrirModalEditar(jogo, e)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteJogo(jogo.id, jogo.equipa);
-                          }}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+      {/* Placar */}
+      <div className="flex items-center justify-center gap-8 py-6">
+        <div className="text-center flex-1">
+          <p className="text-sm text-gray-600 mb-2">{jogo.equipa}</p>
+          <p className="text-4xl font-bold text-gray-900">
+            {jogo.resultado?.nos || 0}
+          </p>
+        </div>
 
-                  {/* Placar */}
-                  <div className="flex items-center justify-center gap-8 py-6">
-                    <div className="text-center flex-1">
-                      <p className="text-sm text-gray-600 mb-2">{jogo.equipa}</p>
-                      <p className="text-4xl font-bold text-gray-900">
-                        {jogo.resultado?.nos || 0}
-                      </p>
-                    </div>
+        <div className="text-2xl font-bold text-gray-400">vs</div>
 
-                    <div className="text-2xl font-bold text-gray-400">vs</div>
+        <div className="text-center flex-1">
+          <p className="text-sm text-gray-600 mb-2">{jogo.adversario}</p>
+          <p className="text-4xl font-bold text-gray-900">
+            {jogo.resultado?.adversario || 0}
+          </p>
+        </div>
+      </div>
 
-                    <div className="text-center flex-1">
-                      <p className="text-sm text-gray-600 mb-2">{jogo.adversario}</p>
-                      <p className="text-4xl font-bold text-gray-900">
-                        {jogo.resultado?.adversario || 0}
-                      </p>
-                    </div>
-                  </div>
+      {jogo.resultado?.sets && (
+        <div className="text-center pt-4 border-t border-gray-100">
+          <span className="text-sm text-gray-600">
+            Sets: <span className="font-semibold">{jogo.resultado.sets}</span>
+          </span>
+        </div>
+      )}
+    </div>
 
-                  {jogo.resultado?.sets && (
-                    <div className="text-center pt-4 border-t border-gray-100">
-                      <span className="text-sm text-gray-600">
-                        Sets: <span className="font-semibold">{jogo.resultado.sets}</span>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+    {/* FOOTER COM BOTÃO DE VÍDEO - Não clicável para Live */}
+    {jogo.videoUrl && (
+      <div className="px-6 pb-4 border-t border-gray-100 pt-4">
+        <a
+          href={jogo.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          Ver Vídeo no YouTube
+        </a>
+      </div>
+    )}
+  </div>
+))}
+
           </div>
         )}
       </main>
@@ -626,6 +652,22 @@ const handleDeleteJogo = async (jogoId, equipa) => {
                     <option value="cancelado">Cancelado</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Vídeo YouTube (Opcional)
+                </label>
+                <input
+                  type="url"
+                  value={formData.videoUrl}
+                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Cole o link completo do vídeo do YouTube
+                </p>
               </div>
 
               {/* Resultado */}
