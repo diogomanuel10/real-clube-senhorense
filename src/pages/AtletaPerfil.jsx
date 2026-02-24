@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import PreparacaoFisicaTab from "../components/preparacao-fisica/PreparacaoFisicaTab";
+import FisioterapiaTab from "../components/fisioterapia/FisioterapiaTab";
 import { useParams, useNavigate } from "react-router-dom";
-import AcademicTab from "../components/atletas/AcademicTab"; // ajusta o path
+import AcademicTab from "../components/atletas/AcademicTab";
 import {
   doc,
   getDoc,
   updateDoc,
   collection,
   getDocs,
-  addDoc,
   query,
   where,
   orderBy,
@@ -23,14 +23,6 @@ export default function AtletaPerfil({ user }) {
   console.log("USER", user);
   const { id } = useParams();
   const navigate = useNavigate();
-  const tabs = [
-    { id: 'dados', label: 'Dados Pessoais' },
-    { id: 'fisioterapia', label: 'Fisioterapia' },
-    { id: 'preparacao-fisica', label: 'Preparação Física' },
-    { id: "academico", label: "Académico" }, // NOVO
-    { id: 'documentos', label: 'Documentos' },
-    { id: 'historico', label: 'Histórico' }
-  ];
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,32 +47,6 @@ export default function AtletaPerfil({ user }) {
 
   // Edição
   const podeEditar = user?.role === "admin";
-
-  // Fisio – episódios
-  const [episodios, setEpisodios] = useState([]);
-  const [loadingFisio, setLoadingFisio] = useState(true);
-  const [showNovoEpisodio, setShowNovoEpisodio] = useState(false);
-  const [episodioForm, setEpisodioForm] = useState({
-    dataInicio: "",
-    diagnosticoFuncional: "",
-    planoTratamento: "",
-    restricoesTreinoJogo: "",
-    previsaoRetorno: "",
-    estado: "ativo",
-  });
-
-  // Fisio – sessões por episódio
-  const [episodioAtivo, setEpisodioAtivo] = useState(null);
-  const [sessoes, setSessoes] = useState([]);
-  const [loadingSessoes, setLoadingSessoes] = useState(false);
-  const [episodioParaSessao, setEpisodioParaSessao] = useState(null);
-  const [sessaoForm, setSessaoForm] = useState({
-    dataSessao: "",
-    nota: "",
-    intervencoes: "",
-    dorAntes: "",
-    dorDepois: "",
-  });
 
   useEffect(() => {
     const fetchAtleta = async () => {
@@ -113,23 +79,6 @@ export default function AtletaPerfil({ user }) {
         alert("Erro ao carregar atleta.");
       } finally {
         setLoading(false);
-      }
-    };
-
-    const fetchEpisodios = async () => {
-      try {
-        const qEpis = query(
-          collection(db, "episodiosClinicos"),
-          where("atletaId", "==", id),
-          orderBy("dataInicio", "desc"),
-        );
-        const snap = await getDocs(qEpis);
-        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setEpisodios(lista);
-      } catch (err) {
-        console.error("Erro ao carregar episódios:", err);
-      } finally {
-        setLoadingFisio(false);
       }
     };
 
@@ -172,31 +121,8 @@ export default function AtletaPerfil({ user }) {
     };
 
     fetchAtleta();
-    fetchEpisodios();
     fetchPresencasAtleta();
-  }, [id, navigate]); // [file:30]
-
-  // Carregar sessões de um episódio
-  const carregarSessoes = async (episodioId) => {
-    if (episodioAtivo === episodioId) {
-      setEpisodioAtivo(null);
-      setSessoes([]);
-      return;
-    }
-
-    setLoadingSessoes(true);
-    try {
-      const ref = collection(db, "episodiosClinicos", episodioId, "sessoes");
-      const snap = await getDocs(query(ref, orderBy("dataSessao", "desc")));
-      setSessoes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setEpisodioAtivo(episodioId);
-    } catch (err) {
-      console.error("Erro ao carregar sessões:", err);
-      alert("Erro ao carregar sessões deste episódio.");
-    } finally {
-      setLoadingSessoes(false);
-    }
-  };
+  }, [id, navigate]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -233,7 +159,6 @@ export default function AtletaPerfil({ user }) {
     );
   }
 
-
   return (
     <DashboardLayout user={user}>
       <div className="min-h-screen bg-gray-50">
@@ -267,49 +192,54 @@ export default function AtletaPerfil({ user }) {
             <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 self-stretch sm:self-auto overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setTab("dados")}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "dados"
-                  ? "bg-white text-blue-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${
+                  tab === "dados"
+                    ? "bg-white text-blue-700 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
                 <Users className="w-4 h-4" />
                 Dados
               </button>
               <button
                 onClick={() => setTab("academico")}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "academico"
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${
+                  tab === "academico"
                     ? "bg-white text-blue-700 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
-                  }`}
+                }`}
               >
                 Académico
               </button>
               <button
                 onClick={() => setTab("fisio")}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "fisio"
-                  ? "bg-white text-slate-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${
+                  tab === "fisio"
+                    ? "bg-white text-slate-700 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
                 <Activity className="w-4 h-4" />
                 Fisioterapia
               </button>
               <button
                 onClick={() => setTab("preparacao-fisica")}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "preparacao-fisica"
-                  ? "bg-white text-green-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${
+                  tab === "preparacao-fisica"
+                    ? "bg-white text-green-700 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
                 <Dumbbell className="w-4 h-4" />
                 Prep. Física
               </button>
               <button
                 onClick={() => setTab("presencas")}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "presencas"
-                  ? "bg-white text-amber-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${
+                  tab === "presencas"
+                    ? "bg-white text-amber-700 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
                 <Calendar className="w-4 h-4" />
                 Presenças
@@ -631,523 +561,9 @@ export default function AtletaPerfil({ user }) {
             </form>
           )}
 
-          {tab === "academico" && (
-            <AcademicTab athleteId={atleta.id} />
-          )}
+          {tab === "academico" && <AcademicTab athleteId={atleta.id} />}
 
-          {/* TAB FISIO */}
-          {tab === "fisio" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-                <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Departamento Médico / Fisioterapia
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    Gestão dos episódios clínicos e histórico de lesões.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowNovoEpisodio(true)}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-900"
-                >
-                  Novo episódio clínico
-                </button>
-              </div>
-
-              {loadingFisio ? (
-                <div className="py-8 text-sm text-gray-500">
-                  A carregar episódios...
-                </div>
-              ) : episodios.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  Ainda não existem episódios clínicos registados para este
-                  atleta.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {episodios.map((ep) => (
-                    <div
-                      key={ep.id}
-                      className="border border-gray-200 rounded-xl p-3 sm:p-4 flex flex-col gap-3"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 sm:gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {ep.diagnosticoFuncional || "Sem diagnóstico definido"}
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-gray-500">
-                            Início: {ep.dataInicio || "-"}
-                            {ep.dataAlta && ` • Alta: ${ep.dataAlta}`}
-                          </p>
-                          {ep.restricoesTreinoJogo && (
-                            <p className="text-[11px] sm:text-xs text-amber-700 mt-1">
-                              Restrição: {ep.restricoesTreinoJogo}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${ep.estado === "ativo"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-emerald-100 text-emerald-700"
-                              }`}
-                          >
-                            {ep.estado === "ativo" ? "Ativo" : "Alta"}
-                          </span>
-
-                          {ep.estado === "ativo" && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (
-                                  !window.confirm(
-                                    "Marcar este episódio como fechado (alta)?",
-                                  )
-                                )
-                                  return;
-                                try {
-                                  const ref = doc(
-                                    db,
-                                    "episodiosClinicos",
-                                    ep.id,
-                                  );
-                                  await updateDoc(ref, {
-                                    estado: "alta",
-                                    dataAlta: new Date()
-                                      .toISOString()
-                                      .slice(0, 10),
-                                  });
-                                  const qEpis = query(
-                                    collection(db, "episodiosClinicos"),
-                                    where("atletaId", "==", id),
-                                    orderBy("dataInicio", "desc"),
-                                  );
-                                  const snap = await getDocs(qEpis);
-                                  setEpisodios(
-                                    snap.docs.map((d) => ({
-                                      id: d.id,
-                                      ...d.data(),
-                                    })),
-                                  );
-                                } catch (err) {
-                                  console.error(
-                                    "Erro ao fechar episódio:",
-                                    err,
-                                  );
-                                  alert(
-                                    "Erro ao fechar episódio clínico",
-                                  );
-                                }
-                              }}
-                              className="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-700 hover:bg-red-50"
-                            >
-                              Fechar episódio
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => carregarSessoes(ep.id)}
-                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
-                          >
-                            {episodioAtivo === ep.id
-                              ? "Esconder sessões"
-                              : "Ver sessões"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEpisodioParaSessao(ep.id);
-                              setSessaoForm({
-                                dataSessao: "",
-                                nota: "",
-                                intervencoes: "",
-                                dorAntes: "",
-                                dorDepois: "",
-                              });
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs hover:bg-slate-900"
-                          >
-                            Nova sessão
-                          </button>
-                        </div>
-                      </div>
-
-                      {episodioAtivo === ep.id && (
-                        <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
-                          {loadingSessoes ? (
-                            <p className="text-xs text-slate-500">
-                              A carregar sessões...
-                            </p>
-                          ) : sessoes.length === 0 ? (
-                            <p className="text-xs text-slate-500">
-                              Ainda sem sessões registadas.
-                            </p>
-                          ) : (
-                            sessoes.map((s) => (
-                              <div
-                                key={s.id}
-                                className="text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2"
-                              >
-                                <p className="font-semibold">
-                                  {s.dataSessao || "Sem data"}{" "}
-                                  {s.responsavel && (
-                                    <span>· {s.responsavel}</span>
-                                  )}
-                                </p>
-                                {typeof s.dorAntes === "number" && (
-                                  <p className="text-[11px] text-slate-500">
-                                    Dor antes: {s.dorAntes}/10{" "}
-                                    {typeof s.dorDepois === "number" &&
-                                      `· depois: ${s.dorDepois}/10`}
-                                  </p>
-                                )}
-                                {s.nota && (
-                                  <p className="mt-1">{s.nota}</p>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Modal NOVO EPISÓDIO */}
-              {showNovoEpisodio && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 sm:p-4 z-50">
-                  <div
-                    className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-slate-900">
-                      <h3 className="text-sm font-semibold text-white">
-                        Novo episódio clínico
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowNovoEpisodio(false)}
-                        className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 transition"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="p-4 sm:p-6 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Data de início
-                        </label>
-                        <input
-                          type="date"
-                          value={episodioForm.dataInicio}
-                          onChange={(e) =>
-                            setEpisodioForm({
-                              ...episodioForm,
-                              dataInicio: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Diagnóstico funcional
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={episodioForm.diagnosticoFuncional}
-                          onChange={(e) =>
-                            setEpisodioForm({
-                              ...episodioForm,
-                              diagnosticoFuncional: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: Entorse tibiotársica direita grau II"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Plano de tratamento
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={episodioForm.planoTratamento}
-                          onChange={(e) =>
-                            setEpisodioForm({
-                              ...episodioForm,
-                              planoTratamento: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: 2–3 sessões/semana, reforço proprioceptivo..."
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Restrições ao treino/jogo
-                        </label>
-                        <input
-                          type="text"
-                          value={episodioForm.restricoesTreinoJogo}
-                          onChange={(e) =>
-                            setEpisodioForm({
-                              ...episodioForm,
-                              restricoesTreinoJogo: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: Sem salto, sem bloqueio, apenas parte técnica"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Previsão de retorno
-                        </label>
-                        <input
-                          type="text"
-                          value={episodioForm.previsaoRetorno}
-                          onChange={(e) =>
-                            setEpisodioForm({
-                              ...episodioForm,
-                              previsaoRetorno: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: 3–4 semanas"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowNovoEpisodio(false)}
-                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await addDoc(
-                              collection(db, "episodiosClinicos"),
-                              {
-                                atletaId: id,
-                                ...episodioForm,
-                                estado: "ativo",
-                                criadoEm: new Date().toISOString(),
-                              },
-                            );
-                            setShowNovoEpisodio(false);
-                            setEpisodioForm({
-                              dataInicio: "",
-                              diagnosticoFuncional: "",
-                              planoTratamento: "",
-                              restricoesTreinoJogo: "",
-                              previsaoRetorno: "",
-                              estado: "ativo",
-                            });
-                            const qEpis = query(
-                              collection(db, "episodiosClinicos"),
-                              where("atletaId", "==", id),
-                              orderBy("dataInicio", "desc"),
-                            );
-                            const snap = await getDocs(qEpis);
-                            setEpisodios(
-                              snap.docs.map((d) => ({
-                                id: d.id,
-                                ...d.data(),
-                              })),
-                            );
-                          } catch (err) {
-                            console.error("Erro ao criar episódio:", err);
-                            alert("Erro ao criar episódio clínico");
-                          }
-                        }}
-                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#f5c623] hover:bg-[#e0b91f] text-[#0b1635] text-sm font-semibold"
-                      >
-                        Guardar episódio
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Modal NOVA SESSÃO */}
-              {episodioParaSessao && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 sm:p-4 z-50">
-                  <div
-                    className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-slate-900">
-                      <h3 className="text-sm font-semibold text-white">
-                        Nova sessão de fisioterapia
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => setEpisodioParaSessao(null)}
-                        className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 transition"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="p-4 sm:p-6 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Data da sessão
-                        </label>
-                        <input
-                          type="date"
-                          value={sessaoForm.dataSessao}
-                          onChange={(e) =>
-                            setSessaoForm({
-                              ...sessaoForm,
-                              dataSessao: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nota / conteúdo da sessão
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={sessaoForm.nota}
-                          onChange={(e) =>
-                            setSessaoForm({
-                              ...sessaoForm,
-                              nota: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: Mobilização, reforço proprioceptivo, corrida leve..."
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Intervenções (opcional)
-                        </label>
-                        <input
-                          type="text"
-                          value={sessaoForm.intervencoes}
-                          onChange={(e) =>
-                            setSessaoForm({
-                              ...sessaoForm,
-                              intervencoes: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          placeholder="Ex: Tec. manual, exercício X, Y, Z"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Dor antes (0–10)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="10"
-                            value={sessaoForm.dorAntes}
-                            onChange={(e) =>
-                              setSessaoForm({
-                                ...sessaoForm,
-                                dorAntes: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Dor depois (0–10)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="10"
-                            value={sessaoForm.dorDepois}
-                            onChange={(e) =>
-                              setSessaoForm({
-                                ...sessaoForm,
-                                dorDepois: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setEpisodioParaSessao(null)}
-                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const refSessoes = collection(
-                              db,
-                              "episodiosClinicos",
-                              episodioParaSessao,
-                              "sessoes",
-                            );
-                            await addDoc(refSessoes, {
-                              ...sessaoForm,
-                              dorAntes:
-                                sessaoForm.dorAntes !== ""
-                                  ? Number(sessaoForm.dorAntes)
-                                  : null,
-                              dorDepois:
-                                sessaoForm.dorDepois !== ""
-                                  ? Number(sessaoForm.dorDepois)
-                                  : null,
-                              createdAt: new Date().toISOString(),
-                            });
-
-                            await carregarSessoes(episodioParaSessao);
-                            setEpisodioParaSessao(null);
-                          } catch (err) {
-                            console.error("Erro ao criar sessão:", err);
-                            alert("Erro ao criar sessão de fisioterapia");
-                          }
-                        }}
-                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#f5c623] hover:bg-[#e0b91f] text-[#0b1635] text-sm font-semibold"
-                      >
-                        Guardar sessão
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {tab === "fisio" && <FisioterapiaTab atleta={atleta} user={user} />}
 
           {tab === "preparacao-fisica" && (
             <PreparacaoFisicaTab atleta={atleta} user={user} />
@@ -1190,26 +606,27 @@ export default function AtletaPerfil({ user }) {
                           <p className="text-[11px] sm:text-xs text-slate-500">
                             {dataTreino
                               ? new Date(dataTreino).toLocaleString("pt-PT", {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              })
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })
                               : "Sem data registada"}
                           </p>
                         </div>
 
                         <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${p.estado === "presente"
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                            p.estado === "presente"
                               ? "bg-emerald-100 text-emerald-800"
                               : p.estado === "falta"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
+                              ? "bg-red-100 text-red-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
                         >
                           {p.estado === "presente"
                             ? "Presente"
                             : p.estado === "falta"
-                              ? "Falta"
-                              : "Justificada"}
+                            ? "Falta"
+                            : "Justificada"}
                         </span>
                       </div>
                     );
@@ -1218,7 +635,6 @@ export default function AtletaPerfil({ user }) {
               )}
             </div>
           )}
-
         </main>
       </div>
     </DashboardLayout>
