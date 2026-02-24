@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PreparacaoFisicaTab from "../components/preparacao-fisica/PreparacaoFisicaTab";
 import { useParams, useNavigate } from "react-router-dom";
+import AcademicTab from "../components/atletas/AcademicTab"; // ajusta o path
 import {
   doc,
   getDoc,
@@ -25,7 +26,8 @@ export default function AtletaPerfil({ user }) {
   const tabs = [
     { id: 'dados', label: 'Dados Pessoais' },
     { id: 'fisioterapia', label: 'Fisioterapia' },
-    { id: 'preparacao-fisica', label: 'Preparação Física' }, // NOVO
+    { id: 'preparacao-fisica', label: 'Preparação Física' },
+    { id: "academico", label: "Académico" }, // NOVO
     { id: 'documentos', label: 'Documentos' },
     { id: 'historico', label: 'Histórico' }
   ];
@@ -131,43 +133,43 @@ export default function AtletaPerfil({ user }) {
       }
     };
 
-const fetchPresencasAtleta = async () => {
-  try {
-    const qPres = query(
-      collection(db, "presencas"),
-      where("atletaId", "==", id),
-      orderBy("createdAt", "desc")
-    );
+    const fetchPresencasAtleta = async () => {
+      try {
+        const qPres = query(
+          collection(db, "presencas"),
+          where("atletaId", "==", id),
+          orderBy("createdAt", "desc")
+        );
 
-    const snap = await getDocs(qPres);
+        const snap = await getDocs(qPres);
 
-    const lista = await Promise.all(
-      snap.docs.map(async (d) => {
-        const data = d.data();
-        let treino = null;
+        const lista = await Promise.all(
+          snap.docs.map(async (d) => {
+            const data = d.data();
+            let treino = null;
 
-        if (data.treinoId) {
-          const treinoSnap = await getDoc(doc(db, "treinos", data.treinoId));
-          if (treinoSnap.exists()) {
-            treino = { id: treinoSnap.id, ...treinoSnap.data() };
-          }
-        }
+            if (data.treinoId) {
+              const treinoSnap = await getDoc(doc(db, "treinos", data.treinoId));
+              if (treinoSnap.exists()) {
+                treino = { id: treinoSnap.id, ...treinoSnap.data() };
+              }
+            }
 
-        return {
-          id: d.id,
-          ...data,
-          treino,
-        };
-      })
-    );
+            return {
+              id: d.id,
+              ...data,
+              treino,
+            };
+          })
+        );
 
-    setPresencasAtleta(lista);
-  } catch (err) {
-    console.error("Erro ao carregar presenças do atleta:", err);
-  } finally {
-    setLoadingPresencas(false);
-  }
-};
+        setPresencasAtleta(lista);
+      } catch (err) {
+        console.error("Erro ao carregar presenças do atleta:", err);
+      } finally {
+        setLoadingPresencas(false);
+      }
+    };
 
     fetchAtleta();
     fetchEpisodios();
@@ -266,18 +268,27 @@ const fetchPresencasAtleta = async () => {
               <button
                 onClick={() => setTab("dados")}
                 className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "dados"
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-blue-700 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 <Users className="w-4 h-4" />
                 Dados
               </button>
               <button
+                onClick={() => setTab("academico")}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "academico"
+                    ? "bg-white text-blue-700 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Académico
+              </button>
+              <button
                 onClick={() => setTab("fisio")}
                 className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "fisio"
-                    ? "bg-white text-slate-700 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-slate-700 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 <Activity className="w-4 h-4" />
@@ -286,8 +297,8 @@ const fetchPresencasAtleta = async () => {
               <button
                 onClick={() => setTab("preparacao-fisica")}
                 className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "preparacao-fisica"
-                    ? "bg-white text-green-700 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-green-700 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 <Dumbbell className="w-4 h-4" />
@@ -296,8 +307,8 @@ const fetchPresencasAtleta = async () => {
               <button
                 onClick={() => setTab("presencas")}
                 className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 transition whitespace-nowrap ${tab === "presencas"
-                    ? "bg-white text-amber-700 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-amber-700 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
                   }`}
               >
                 <Calendar className="w-4 h-4" />
@@ -620,7 +631,9 @@ const fetchPresencasAtleta = async () => {
             </form>
           )}
 
-
+          {tab === "academico" && (
+            <AcademicTab athleteId={atleta.id} />
+          )}
 
           {/* TAB FISIO */}
           {tab === "fisio" && (
@@ -678,8 +691,8 @@ const fetchPresencasAtleta = async () => {
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${ep.estado === "ativo"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-emerald-100 text-emerald-700"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-emerald-100 text-emerald-700"
                               }`}
                           >
                             {ep.estado === "ativo" ? "Ativo" : "Alta"}
@@ -1136,76 +1149,75 @@ const fetchPresencasAtleta = async () => {
             </div>
           )}
 
- {tab === "preparacao-fisica" && (
-  <PreparacaoFisicaTab atleta={atleta} user={user} />
-)}
+          {tab === "preparacao-fisica" && (
+            <PreparacaoFisicaTab atleta={atleta} user={user} />
+          )}
 
           {/* TAB PRESENÇAS */}
-       {tab === "presencas" && (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
-    <div>
-      <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-        Presenças em treinos
-      </h2>
-      <p className="text-xs sm:text-sm text-gray-600">
-        Histórico de presenças, faltas e justificações desta atleta.
-      </p>
-    </div>
-
-    {loadingPresencas ? (
-      <p className="text-sm text-slate-500">A carregar presenças...</p>
-    ) : presencasAtleta.length === 0 ? (
-      <p className="text-sm text-slate-500">
-        Ainda não existem registos de presenças para esta atleta.
-      </p>
-    ) : (
-      <div className="space-y-2">
-        {presencasAtleta.map((p) => {
-          const dataTreino =
-            p.treino?.dataTreino ||
-            (p.createdAt?.toDate ? p.createdAt.toDate() : null);
-
-          return (
-            <div
-              key={p.id}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2"
-            >
+          {tab === "presencas" && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
               <div>
-                <p className="text-sm font-medium text-slate-900">
-                 Treino
-                </p>
-                <p className="text-[11px] sm:text-xs text-slate-500">
-                  {dataTreino
-                    ? new Date(dataTreino).toLocaleString("pt-PT", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })
-                    : "Sem data registada"}
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                  Presenças em treinos
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Histórico de presenças, faltas e justificações desta atleta.
                 </p>
               </div>
 
-              <span
-                className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                  p.estado === "presente"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : p.estado === "falta"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-amber-100 text-amber-800"
-                }`}
-              >
-                {p.estado === "presente"
-                  ? "Presente"
-                  : p.estado === "falta"
-                  ? "Falta"
-                  : "Justificada"}
-              </span>
+              {loadingPresencas ? (
+                <p className="text-sm text-slate-500">A carregar presenças...</p>
+              ) : presencasAtleta.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Ainda não existem registos de presenças para esta atleta.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {presencasAtleta.map((p) => {
+                    const dataTreino =
+                      p.treino?.dataTreino ||
+                      (p.createdAt?.toDate ? p.createdAt.toDate() : null);
+
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            Treino
+                          </p>
+                          <p className="text-[11px] sm:text-xs text-slate-500">
+                            {dataTreino
+                              ? new Date(dataTreino).toLocaleString("pt-PT", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })
+                              : "Sem data registada"}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${p.estado === "presente"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : p.estado === "falta"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                        >
+                          {p.estado === "presente"
+                            ? "Presente"
+                            : p.estado === "falta"
+                              ? "Falta"
+                              : "Justificada"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
+          )}
 
         </main>
       </div>

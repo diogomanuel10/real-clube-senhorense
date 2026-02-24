@@ -18,6 +18,13 @@
         }
       ],
       "density": "SPARSE_ALL"
+    },  {
+      "collectionGroup": "avaliacoes_fisicas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "atletaId", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
     },
       {
       "collectionGroup": "jogos",
