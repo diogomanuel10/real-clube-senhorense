@@ -4,6 +4,11 @@ export const CATEGORIAS_EXERCICIOS = [
   { value: "prevenção", label: "Prevenção Lesões" },
   { value: "cardio", label: "Cardio" },
   { value: "core", label: "Core" },
+  {value : "Ataque", label : "Ataque"},
+  {value : "Defesa", label : "Defesa"},
+  {value : "Receção", label : "Receção"},
+  {value : "Serviço", label : "Serviço"},
+  {value : "Bloco", label : "Bloco"},
 ];
 
 export const CONTEXTOS_EXERCICIOS = [

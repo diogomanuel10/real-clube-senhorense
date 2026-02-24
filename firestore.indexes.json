@@ -18,6 +18,20 @@
         }
       ],
       "density": "SPARSE_ALL"
+    },
+      {
+      "collectionGroup": "jogos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "equipa",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

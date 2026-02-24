@@ -8,8 +8,8 @@ import {
   Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie 
 } from 'recharts';
 
-export default function Analytics({ stats, historico, setAtual, jogo, resultado }) {
-  // ========== CALCULAR TOTAIS ==========
+export default function Analytics({ stats, historico, setAtual, jogo, resultadosPorSet }) {
+  // ========== CALCULAR TOTAIS GLOBAIS ==========
   const totais = Object.values(stats).reduce(
     (acc, stat) => ({
       pontos: acc.pontos + (stat.pontos || 0),
@@ -23,249 +23,280 @@ export default function Analytics({ stats, historico, setAtual, jogo, resultado 
     { pontos: 0, aces: 0, bloqueios: 0, defesas: 0, erros: 0, ataquesEficazes: 0, ataques: 0 }
   );
 
-  // ========== ANÁLISES POR TIPO ==========
-  const analisePorTipo = {
+  // ========== FILTRAR HISTÓRICO POR SET ==========
+  const historicoSetAtual = historico.filter(a => a.set === setAtual);
+  const historicoGlobal = historico;
+
+  // ========== ANÁLISES POR TIPO (SET ATUAL) ==========
+  const analisePorTipoSet = {
     ataque: {
-      pontos: historico.filter(a => a.tipo === 'ataque_ponto').length,
-      continuidade: historico.filter(a => a.tipo === 'ataque_continuidade').length,
-      erros: historico.filter(a => a.tipo === 'ataque_erro').length,
+      pontos: historicoSetAtual.filter(a => a.tipo === 'ataque_ponto').length,
+      continuidade: historicoSetAtual.filter(a => a.tipo === 'ataque_continuidade').length,
+      erros: historicoSetAtual.filter(a => a.tipo === 'ataque_erro').length,
     },
     servico: {
-      aces: historico.filter(a => a.tipo === 'servico_ace').length,
-      dificil: historico.filter(a => a.tipo === 'servico_dificil').length,
-      facil: historico.filter(a => a.tipo === 'servico_facil').length,
-      erros: historico.filter(a => a.tipo === 'servico_erro').length,
+      aces: historicoSetAtual.filter(a => a.tipo === 'servico_ace').length,
+      dificil: historicoSetAtual.filter(a => a.tipo === 'servico_dificil').length,
+      facil: historicoSetAtual.filter(a => a.tipo === 'servico_facil').length,
+      erros: historicoSetAtual.filter(a => a.tipo === 'servico_erro').length,
     },
     recepcao: {
-      perfeita: historico.filter(a => a.tipo === 'recepcao_perfeita').length,
-      muitoBoa: historico.filter(a => a.tipo === 'recepcao_muito_boa').length,
-      boa: historico.filter(a => a.tipo === 'recepcao_boa').length,
-      ma: historico.filter(a => a.tipo === 'recepcao_ma').length,
-      erros: historico.filter(a => a.tipo === 'recepcao_erro').length,
+      perfeita: historicoSetAtual.filter(a => a.tipo === 'recepcao_perfeita').length,
+      muitoBoa: historicoSetAtual.filter(a => a.tipo === 'recepcao_muito_boa').length,
+      boa: historicoSetAtual.filter(a => a.tipo === 'recepcao_boa').length,
+      ma: historicoSetAtual.filter(a => a.tipo === 'recepcao_ma').length,
+      erros: historicoSetAtual.filter(a => a.tipo === 'recepcao_erro').length,
     },
     bloco: {
-      pontos: historico.filter(a => a.tipo === 'bloco_ponto').length,
-      erros: historico.filter(a => a.tipo === 'bloco_erro').length,
+      pontos: historicoSetAtual.filter(a => a.tipo === 'bloco_ponto').length,
+      erros: historicoSetAtual.filter(a => a.tipo === 'bloco_erro').length,
     },
     defesa: {
-      boas: historico.filter(a => a.tipo === 'defesa_boa').length,
-      tocou: historico.filter(a => a.tipo === 'defesa_tocou').length,
-      erros: historico.filter(a => a.tipo === 'defesa_erro').length,
+      boas: historicoSetAtual.filter(a => a.tipo === 'defesa_boa').length,
+      tocou: historicoSetAtual.filter(a => a.tipo === 'defesa_tocou').length,
+      erros: historicoSetAtual.filter(a => a.tipo === 'defesa_erro').length,
     },
   };
 
-  // ========== EFICIÊNCIAS ==========
-  const eficienciaAtaque = totais.ataques > 0 
-    ? ((totais.ataquesEficazes / totais.ataques) * 100).toFixed(0)
+  // ========== ANÁLISES GLOBAIS (TODOS OS SETS) ==========
+  const analisePorTipoGlobal = {
+    ataque: {
+      pontos: historicoGlobal.filter(a => a.tipo === 'ataque_ponto').length,
+      continuidade: historicoGlobal.filter(a => a.tipo === 'ataque_continuidade').length,
+      erros: historicoGlobal.filter(a => a.tipo === 'ataque_erro').length,
+    },
+    servico: {
+      aces: historicoGlobal.filter(a => a.tipo === 'servico_ace').length,
+      dificil: historicoGlobal.filter(a => a.tipo === 'servico_dificil').length,
+      facil: historicoGlobal.filter(a => a.tipo === 'servico_facil').length,
+      erros: historicoGlobal.filter(a => a.tipo === 'servico_erro').length,
+    },
+    recepcao: {
+      perfeita: historicoGlobal.filter(a => a.tipo === 'recepcao_perfeita').length,
+      muitoBoa: historicoGlobal.filter(a => a.tipo === 'recepcao_muito_boa').length,
+      boa: historicoGlobal.filter(a => a.tipo === 'recepcao_boa').length,
+      ma: historicoGlobal.filter(a => a.tipo === 'recepcao_ma').length,
+      erros: historicoGlobal.filter(a => a.tipo === 'recepcao_erro').length,
+    },
+    bloco: {
+      pontos: historicoGlobal.filter(a => a.tipo === 'bloco_ponto').length,
+      erros: historicoGlobal.filter(a => a.tipo === 'bloco_erro').length,
+    },
+    defesa: {
+      boas: historicoGlobal.filter(a => a.tipo === 'defesa_boa').length,
+      tocou: historicoGlobal.filter(a => a.tipo === 'defesa_tocou').length,
+      erros: historicoGlobal.filter(a => a.tipo === 'defesa_erro').length,
+    },
+  };
+
+  // ========== COMPARAÇÃO ENTRE SETS ==========
+  const dadosComparacaoSets = Object.keys(resultadosPorSet)
+    .filter(set => resultadosPorSet[set].nos > 0 || resultadosPorSet[set].adversario > 0)
+    .map(set => {
+      const historicoDoSet = historico.filter(a => a.set === parseInt(set));
+      
+      return {
+        set: `Set ${set}`,
+        nos: resultadosPorSet[set].nos,
+        adversario: resultadosPorSet[set].adversario,
+        aces: historicoDoSet.filter(a => a.tipo === 'servico_ace').length,
+        erros: historicoDoSet.filter(a => 
+          a.tipo === 'ataque_erro' || 
+          a.tipo === 'servico_erro' || 
+          a.tipo === 'erro_equipa'
+        ).length,
+        ataquesPonto: historicoDoSet.filter(a => a.tipo === 'ataque_ponto').length,
+      };
+    });
+
+  // ========== EFICIÊNCIAS (SET ATUAL) ==========
+  const totalAtaquesSet = analisePorTipoSet.ataque.pontos + analisePorTipoSet.ataque.continuidade + analisePorTipoSet.ataque.erros;
+  const eficienciaAtaqueSet = totalAtaquesSet > 0 
+    ? ((analisePorTipoSet.ataque.pontos / totalAtaquesSet) * 100).toFixed(0)
     : 0;
 
-  const totalServicos = analisePorTipo.servico.aces + analisePorTipo.servico.dificil + 
-                        analisePorTipo.servico.facil + analisePorTipo.servico.erros;
-  const eficienciaServico = totalServicos > 0
-    ? (((analisePorTipo.servico.aces + analisePorTipo.servico.dificil) / totalServicos) * 100).toFixed(0)
+  const totalServicosSet = analisePorTipoSet.servico.aces + analisePorTipoSet.servico.dificil + 
+                        analisePorTipoSet.servico.facil + analisePorTipoSet.servico.erros;
+  const eficienciaServicoSet = totalServicosSet > 0
+    ? (((analisePorTipoSet.servico.aces + analisePorTipoSet.servico.dificil) / totalServicosSet) * 100).toFixed(0)
     : 0;
 
-  const totalRecepcoes = analisePorTipo.recepcao.perfeita + analisePorTipo.recepcao.muitoBoa +
-                         analisePorTipo.recepcao.boa + analisePorTipo.recepcao.ma + analisePorTipo.recepcao.erros;
-  const eficienciaRecepcao = totalRecepcoes > 0
-    ? (((analisePorTipo.recepcao.perfeita + analisePorTipo.recepcao.muitoBoa) / totalRecepcoes) * 100).toFixed(0)
+  const totalRecepcoesSet = analisePorTipoSet.recepcao.perfeita + analisePorTipoSet.recepcao.muitoBoa +
+                         analisePorTipoSet.recepcao.boa + analisePorTipoSet.recepcao.ma + analisePorTipoSet.recepcao.erros;
+  const eficienciaRecepcaoSet = totalRecepcoesSet > 0
+    ? (((analisePorTipoSet.recepcao.perfeita + analisePorTipoSet.recepcao.muitoBoa) / totalRecepcoesSet) * 100).toFixed(0)
     : 0;
 
-  const totalBlocos = analisePorTipo.bloco.pontos + analisePorTipo.bloco.erros;
-  const eficienciaBloco = totalBlocos > 0
-    ? ((analisePorTipo.bloco.pontos / totalBlocos) * 100).toFixed(0)
+  const totalBlocosSet = analisePorTipoSet.bloco.pontos + analisePorTipoSet.bloco.erros;
+  const eficienciaBlocoSet = totalBlocosSet > 0
+    ? ((analisePorTipoSet.bloco.pontos / totalBlocosSet) * 100).toFixed(0)
     : 0;
 
-  // ========== DIFERENÇA DE PONTOS ==========
-  const diferencaPontos = resultado.nos - resultado.adversario;
+  // ========== EFICIÊNCIAS GLOBAIS ==========
+  const totalAtaquesGlobal = totais.ataques;
+  const eficienciaAtaqueGlobal = totalAtaquesGlobal > 0 
+    ? ((totais.ataquesEficazes / totalAtaquesGlobal) * 100).toFixed(0)
+    : 0;
 
-  // ========== EVOLUÇÃO DE PONTOS ==========
-  const evolucaoPontos = [];
-  let pontosNos = 0;
-  let pontosAdv = 0;
-  
-  [...historico].reverse().slice(0, 30).forEach((acao, idx) => {
-    if (['ataque_ponto', 'servico_ace', 'bloco_ponto', 'erro_adversario'].includes(acao.tipo)) {
-      pontosNos++;
-    } else if (['erro_equipa', 'ponto_adversario', 'ataque_erro', 'servico_erro'].includes(acao.tipo)) {
-      pontosAdv++;
-    }
-    
-    if (idx % 3 === 0) {
-      evolucaoPontos.push({
-        momento: Math.floor(idx / 3) + 1,
-        nos: pontosNos,
-        adversario: pontosAdv,
-      });
-    }
-  });
+  const totalServicosGlobal = analisePorTipoGlobal.servico.aces + analisePorTipoGlobal.servico.dificil + 
+                        analisePorTipoGlobal.servico.facil + analisePorTipoGlobal.servico.erros;
+  const eficienciaServicoGlobal = totalServicosGlobal > 0
+    ? (((analisePorTipoGlobal.servico.aces + analisePorTipoGlobal.servico.dificil) / totalServicosGlobal) * 100).toFixed(0)
+    : 0;
+
+  // ========== DIFERENÇA DE PONTOS (SET ATUAL) ==========
+  const resultadoSet = resultadosPorSet[setAtual] || { nos: 0, adversario: 0 };
+  const diferencaPontosSet = resultadoSet.nos - resultadoSet.adversario;
 
   // ========== DADOS PARA GRÁFICOS ==========
   
-  // Gráfico de Ataque
-  const dadosAtaque = [
-    { name: 'Pontos', value: analisePorTipo.ataque.pontos, cor: '#10B981' },
-    { name: 'Continuidade', value: analisePorTipo.ataque.continuidade, cor: '#3B82F6' },
-    { name: 'Erros', value: analisePorTipo.ataque.erros, cor: '#EF4444' },
+  // Gráfico de Ataque (Set Atual)
+  const dadosAtaqueSet = [
+    { name: 'Pontos', value: analisePorTipoSet.ataque.pontos, cor: '#10B981' },
+    { name: 'Continuidade', value: analisePorTipoSet.ataque.continuidade, cor: '#3B82F6' },
+    { name: 'Erros', value: analisePorTipoSet.ataque.erros, cor: '#EF4444' },
   ];
 
-  // Gráfico de Serviço
-  const dadosServico = [
-    { name: 'Aces', value: analisePorTipo.servico.aces, cor: '#FBBF24' },
-    { name: 'Difícil', value: analisePorTipo.servico.dificil, cor: '#3B82F6' },
-    { name: 'Fácil', value: analisePorTipo.servico.facil, cor: '#6B7280' },
-    { name: 'Erros', value: analisePorTipo.servico.erros, cor: '#EF4444' },
+  // Gráfico de Serviço (Set Atual)
+  const dadosServicoSet = [
+    { name: 'Aces', value: analisePorTipoSet.servico.aces, cor: '#FBBF24' },
+    { name: 'Difícil', value: analisePorTipoSet.servico.dificil, cor: '#3B82F6' },
+    { name: 'Fácil', value: analisePorTipoSet.servico.facil, cor: '#6B7280' },
+    { name: 'Erros', value: analisePorTipoSet.servico.erros, cor: '#EF4444' },
   ];
 
-  // Gráfico de Receção
-  const dadosRecepcao = [
-    { name: 'Perfeita', value: analisePorTipo.recepcao.perfeita, cor: '#10B981' },
-    { name: 'Muito Boa', value: analisePorTipo.recepcao.muitoBoa, cor: '#3B82F6' },
-    { name: 'Boa', value: analisePorTipo.recepcao.boa, cor: '#60A5FA' },
-    { name: 'Má', value: analisePorTipo.recepcao.ma, cor: '#F97316' },
-    { name: 'Erros', value: analisePorTipo.recepcao.erros, cor: '#EF4444' },
+  // Gráfico de Receção (Set Atual)
+  const dadosRecepcaoSet = [
+    { name: 'Perfeita', value: analisePorTipoSet.recepcao.perfeita, cor: '#10B981' },
+    { name: 'Muito Boa', value: analisePorTipoSet.recepcao.muitoBoa, cor: '#3B82F6' },
+    { name: 'Boa', value: analisePorTipoSet.recepcao.boa, cor: '#60A5FA' },
+    { name: 'Má', value: analisePorTipoSet.recepcao.ma, cor: '#F97316' },
+    { name: 'Erros', value: analisePorTipoSet.recepcao.erros, cor: '#EF4444' },
   ];
 
-  // Radar de Performance Geral
-  const dadosRadar = [
-    { categoria: 'Ataque', valor: parseInt(eficienciaAtaque) },
-    { categoria: 'Serviço', valor: parseInt(eficienciaServico) },
-    { categoria: 'Receção', valor: parseInt(eficienciaRecepcao) },
-    { categoria: 'Bloco', valor: parseInt(eficienciaBloco) },
-    { categoria: 'Defesa', valor: analisePorTipo.defesa.boas > 0 ? 75 : 50 },
+  // Radar de Performance (Set Atual)
+  const dadosRadarSet = [
+    { categoria: 'Ataque', valor: parseInt(eficienciaAtaqueSet) },
+    { categoria: 'Serviço', valor: parseInt(eficienciaServicoSet) },
+    { categoria: 'Receção', valor: parseInt(eficienciaRecepcaoSet) },
+    { categoria: 'Bloco', valor: parseInt(eficienciaBlocoSet) },
+    { categoria: 'Defesa', valor: analisePorTipoSet.defesa.boas > 0 ? 75 : 50 },
   ];
 
-  // Top 5 Atletas (pontos)
-  // Top 5 Atletas (pontos) - com nomes dos atletas
-const top5Atletas = Object.entries(stats)
-  .map(([atletaId, stat]) => {
-    // Buscar nome do atleta no histórico
-    const acaoDoAtleta = historico.find(h => h.atletaId === atletaId);
-    return {
-      id: atletaId,
-      nome: acaoDoAtleta?.atletaNome || 'Atleta',
-      ...stat
-    };
-  })
-  .sort((a, b) => b.pontos - a.pontos)
-  .slice(0, 5)
-  .filter(a => a.pontos > 0); // Só mostrar quem tem pontos
+  // Top 5 Atletas (Global)
+  const top5Atletas = Object.entries(stats)
+    .map(([atletaId, stat]) => {
+      const acaoDoAtleta = historico.find(h => h.atletaId === atletaId);
+      return {
+        id: atletaId,
+        nome: acaoDoAtleta?.atletaNome || 'Atleta',
+        ...stat
+      };
+    })
+    .sort((a, b) => b.pontos - a.pontos)
+    .slice(0, 5)
+    .filter(a => a.pontos > 0);
 
+  // ========== INDICADORES INTELIGENTES (SET ATUAL) ==========
+  const errosSet = historicoSetAtual.filter(a => 
+    a.tipo.includes('erro') || a.tipo === 'erro_equipa'
+  ).length;
 
-  // ========== INDICADORES INTELIGENTES ==========
   const indicadores = [];
 
   // Análise de Erros
-  if (totais.erros > 15) {
+  if (errosSet > 8) {
     indicadores.push({
       tipo: 'perigo',
-      titulo: 'Muitos Erros!',
-      descricao: `${totais.erros} erros - REDUZIR RISCO`,
+      titulo: 'Muitos Erros neste Set!',
+      descricao: `${errosSet} erros - REDUZIR RISCO`,
       icon: AlertTriangle,
     });
-  } else if (totais.erros > 8) {
+  } else if (errosSet > 4) {
     indicadores.push({
       tipo: 'atencao',
       titulo: 'Atenção aos Erros',
-      descricao: `${totais.erros} erros - manter controlo`,
+      descricao: `${errosSet} erros - manter controlo`,
       icon: AlertCircle,
     });
   } else {
     indicadores.push({
       tipo: 'sucesso',
       titulo: 'Poucos Erros ✓',
-      descricao: `${totais.erros} erros - continuar assim!`,
+      descricao: `${errosSet} erros - continuar assim!`,
       icon: CheckCircle,
     });
   }
 
   // Diferença de Pontos
-  if (diferencaPontos >= 5) {
+  if (diferencaPontosSet >= 5) {
     indicadores.push({
       tipo: 'sucesso',
-      titulo: 'A Ganhar! 🔥',
-      descricao: `+${diferencaPontos} pontos de vantagem`,
+      titulo: 'A Ganhar o Set! 🔥',
+      descricao: `+${diferencaPontosSet} pontos de vantagem`,
       icon: TrendingUp,
     });
-  } else if (diferencaPontos <= -5) {
+  } else if (diferencaPontosSet <= -5) {
     indicadores.push({
       tipo: 'perigo',
-      titulo: 'A Perder 😰',
-      descricao: `${diferencaPontos} pontos - REAGIR!`,
+      titulo: 'A Perder o Set 😰',
+      descricao: `${diferencaPontosSet} pontos - REAGIR!`,
       icon: TrendingDown,
     });
-  } else if (diferencaPontos > 0) {
+  } else if (diferencaPontosSet > 0) {
     indicadores.push({
       tipo: 'atencao',
       titulo: 'Vantagem Curta',
-      descricao: `+${diferencaPontos} - não relaxar`,
+      descricao: `+${diferencaPontosSet} - não relaxar`,
       icon: Activity,
     });
-  } else if (diferencaPontos < 0) {
+  } else if (diferencaPontosSet < 0) {
     indicadores.push({
       tipo: 'atencao',
       titulo: 'Precisa Reagir',
-      descricao: `${diferencaPontos} - focar no básico`,
+      descricao: `${diferencaPontosSet} - focar no básico`,
       icon: Activity,
     });
   }
 
   // Eficiência de Ataque
-  if (eficienciaAtaque >= 50) {
+  if (eficienciaAtaqueSet >= 50) {
     indicadores.push({
       tipo: 'sucesso',
       titulo: 'Ataque Eficaz ⚡',
-      descricao: `${eficienciaAtaque}% - continuar a atacar!`,
+      descricao: `${eficienciaAtaqueSet}% neste set`,
       icon: Zap,
     });
-  } else if (eficienciaAtaque >= 35) {
+  } else if (eficienciaAtaqueSet >= 35) {
     indicadores.push({
       tipo: 'atencao',
       titulo: 'Ataque Regular',
-      descricao: `${eficienciaAtaque}% - variar jogadas`,
+      descricao: `${eficienciaAtaqueSet}% - variar jogadas`,
       icon: Target,
     });
-  } else if (totais.ataques > 5) {
+  } else if (totalAtaquesSet > 5) {
     indicadores.push({
       tipo: 'perigo',
       titulo: 'Ataque Fraco',
-      descricao: `${eficienciaAtaque}% - melhorar colocação`,
+      descricao: `${eficienciaAtaqueSet}% - melhorar colocação`,
       icon: AlertTriangle,
     });
   }
 
   // Eficiência de Serviço
-  if (analisePorTipo.servico.aces >= 5) {
+  if (analisePorTipoSet.servico.aces >= 3) {
     indicadores.push({
       tipo: 'sucesso',
       titulo: 'Serviço Forte 🔥',
-      descricao: `${analisePorTipo.servico.aces} aces - pressionar!`,
+      descricao: `${analisePorTipoSet.servico.aces} aces neste set`,
       icon: Award,
     });
-  } else if (analisePorTipo.servico.erros >= 5) {
+  } else if (analisePorTipoSet.servico.erros >= 3) {
     indicadores.push({
       tipo: 'perigo',
       titulo: 'Erros de Serviço',
-      descricao: `${analisePorTipo.servico.erros} erros - REDUZIR RISCO`,
+      descricao: `${analisePorTipoSet.servico.erros} erros - REDUZIR RISCO`,
       icon: AlertTriangle,
-    });
-  }
-
-  // Receção
-  const bonsRecepcoes = analisePorTipo.recepcao.perfeita + analisePorTipo.recepcao.muitoBoa;
-  if (eficienciaRecepcao >= 60) {
-    indicadores.push({
-      tipo: 'sucesso',
-      titulo: 'Boa Receção ✓',
-      descricao: `${eficienciaRecepcao}% positiva`,
-      icon: ThumbsUp,
-    });
-  } else if (totalRecepcoes > 5 && eficienciaRecepcao < 40) {
-    indicadores.push({
-      tipo: 'perigo',
-      titulo: 'Receção Fraca',
-      descricao: `Apenas ${eficienciaRecepcao}% positiva`,
-      icon: ThumbsDown,
     });
   }
 
@@ -273,9 +304,50 @@ const top5Atletas = Object.entries(stats)
 
   return (
     <div className="space-y-6">
-      {/* ========== INDICADORES DE PERFORMANCE ========== */}
+      {/* ========== TABS: SET ATUAL vs JOGO COMPLETO ========== */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-xl text-purple-400">📊 Análise</h3>
+          <div className="flex gap-2 text-sm">
+            <span className="px-3 py-1 bg-blue-600 rounded-lg font-bold">
+              Set {setAtual}
+            </span>
+            <span className="px-3 py-1 bg-gray-700 rounded-lg">
+              {resultadoSet.nos} - {resultadoSet.adversario}
+            </span>
+          </div>
+        </div>
+
+        {/* Resumo de Todos os Sets */}
+        <div className="grid grid-cols-5 gap-2">
+          {Object.keys(resultadosPorSet).map(set => {
+            const res = resultadosPorSet[set];
+            const temDados = res.nos > 0 || res.adversario > 0;
+            
+            return (
+              <div
+                key={set}
+                className={`text-center p-3 rounded-lg transition ${
+                  parseInt(set) === setAtual
+                    ? 'bg-blue-600 text-white'
+                    : temDados
+                    ? 'bg-gray-700 text-gray-300'
+                    : 'bg-gray-800 text-gray-600'
+                }`}
+              >
+                <div className="text-xs mb-1">Set {set}</div>
+                <div className="font-bold">
+                  {temDados ? `${res.nos}-${res.adversario}` : '-'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========== INDICADORES DE PERFORMANCE (SET ATUAL) ========== */}
       <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="font-bold text-xl mb-4 text-purple-400">🎯 Análise em Tempo Real</h3>
+        <h3 className="font-bold text-xl mb-4 text-purple-400">🎯 Análise do Set {setAtual}</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {indicadores.map((indicador, idx) => {
@@ -304,12 +376,52 @@ const top5Atletas = Object.entries(stats)
         </div>
       </div>
 
-      {/* ========== RADAR DE PERFORMANCE ========== */}
+      {/* ========== COMPARAÇÃO ENTRE SETS ========== */}
+      {dadosComparacaoSets.length > 1 && (
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h3 className="font-bold text-xl mb-4 text-green-400">📈 Evolução por Set</h3>
+          
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={dadosComparacaoSets}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="set" stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} />
+              <YAxis stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1F2937', 
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }}
+              />
+              <Legend />
+              <Bar dataKey="nos" fill="#3B82F6" name={jogo.equipa} radius={[8, 8, 0, 0]} />
+              <Bar dataKey="adversario" fill="#EF4444" name={jogo.adversario} radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+
+          {/* Mini stats por set */}
+          <div className="grid grid-cols-5 gap-3 mt-4">
+            {dadosComparacaoSets.map((setData, idx) => (
+              <div key={idx} className="bg-gray-700 rounded-lg p-3 text-center text-xs">
+                <div className="font-bold mb-2">{setData.set}</div>
+                <div className="space-y-1 text-gray-400">
+                  <div>⚡ {setData.aces} aces</div>
+                  <div>❌ {setData.erros} erros</div>
+                  <div>🔥 {setData.ataquesPonto} ataques</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========== RADAR DE PERFORMANCE (SET ATUAL) ========== */}
       <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="font-bold text-xl mb-4 text-blue-400">📊 Performance Global</h3>
+        <h3 className="font-bold text-xl mb-4 text-blue-400">📊 Performance do Set {setAtual}</h3>
         
         <ResponsiveContainer width="100%" height={300}>
-          <RadarChart data={dadosRadar}>
+          <RadarChart data={dadosRadarSet}>
             <PolarGrid stroke="#374151" />
             <PolarAngleAxis dataKey="categoria" tick={{ fill: '#9CA3AF' }} />
             <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9CA3AF' }} />
@@ -333,35 +445,35 @@ const top5Atletas = Object.entries(stats)
 
         <div className="grid grid-cols-5 gap-2 mt-4 text-center text-sm">
           <div>
-            <div className="font-bold text-2xl text-green-400">{eficienciaAtaque}%</div>
+            <div className="font-bold text-2xl text-green-400">{eficienciaAtaqueSet}%</div>
             <div className="text-gray-400 text-xs">Ataque</div>
           </div>
           <div>
-            <div className="font-bold text-2xl text-yellow-400">{eficienciaServico}%</div>
+            <div className="font-bold text-2xl text-yellow-400">{eficienciaServicoSet}%</div>
             <div className="text-gray-400 text-xs">Serviço</div>
           </div>
           <div>
-            <div className="font-bold text-2xl text-blue-400">{eficienciaRecepcao}%</div>
+            <div className="font-bold text-2xl text-blue-400">{eficienciaRecepcaoSet}%</div>
             <div className="text-gray-400 text-xs">Receção</div>
           </div>
           <div>
-            <div className="font-bold text-2xl text-red-400">{eficienciaBloco}%</div>
+            <div className="font-bold text-2xl text-red-400">{eficienciaBlocoSet}%</div>
             <div className="text-gray-400 text-xs">Bloco</div>
           </div>
           <div>
-            <div className="font-bold text-2xl text-purple-400">{totais.defesas}</div>
+            <div className="font-bold text-2xl text-purple-400">{analisePorTipoSet.defesa.boas + analisePorTipoSet.defesa.tocou}</div>
             <div className="text-gray-400 text-xs">Defesas</div>
           </div>
         </div>
       </div>
 
-      {/* ========== GRÁFICOS DETALHADOS ========== */}
+      {/* ========== GRÁFICOS DETALHADOS (SET ATUAL) ========== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* ATAQUE */}
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4 text-green-400">🔥 Análise de Ataque</h3>
+          <h3 className="font-bold text-lg mb-4 text-green-400">🔥 Análise de Ataque (Set {setAtual})</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dadosAtaque}>
+            <BarChart data={dadosAtaqueSet}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} />
               <YAxis stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} />
@@ -374,25 +486,25 @@ const top5Atletas = Object.entries(stats)
                 }}
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {dadosAtaque.map((entry, index) => (
+                {dadosAtaqueSet.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.cor} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="text-center mt-3">
-            <span className="text-3xl font-bold text-green-400">{eficienciaAtaque}%</span>
+            <span className="text-3xl font-bold text-green-400">{eficienciaAtaqueSet}%</span>
             <span className="text-sm text-gray-400 ml-2">eficácia</span>
           </div>
         </div>
 
         {/* SERVIÇO */}
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4 text-yellow-400">⚡ Análise de Serviço</h3>
+          <h3 className="font-bold text-lg mb-4 text-yellow-400">⚡ Análise de Serviço (Set {setAtual})</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={dadosServico.filter(d => d.value > 0)}
+                data={dadosServicoSet.filter(d => d.value > 0)}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -401,7 +513,7 @@ const top5Atletas = Object.entries(stats)
                 fill="#8884d8"
                 dataKey="value"
               >
-                {dadosServico.map((entry, index) => (
+                {dadosServicoSet.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.cor} />
                 ))}
               </Pie>
@@ -409,16 +521,16 @@ const top5Atletas = Object.entries(stats)
             </PieChart>
           </ResponsiveContainer>
           <div className="text-center mt-3">
-            <span className="text-3xl font-bold text-yellow-400">{analisePorTipo.servico.aces}</span>
+            <span className="text-3xl font-bold text-yellow-400">{analisePorTipoSet.servico.aces}</span>
             <span className="text-sm text-gray-400 ml-2">aces</span>
           </div>
         </div>
 
         {/* RECEÇÃO */}
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4 text-blue-400">🎯 Qualidade de Receção</h3>
+          <h3 className="font-bold text-lg mb-4 text-blue-400">🎯 Qualidade de Receção (Set {setAtual})</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dadosRecepcao} layout="vertical">
+            <BarChart data={dadosRecepcaoSet} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis type="number" stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} />
               <YAxis dataKey="name" type="category" stroke="#9CA3AF" tick={{ fill: '#9CA3AF' }} width={80} />
@@ -431,92 +543,51 @@ const top5Atletas = Object.entries(stats)
                 }}
               />
               <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                {dadosRecepcao.map((entry, index) => (
+                {dadosRecepcaoSet.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.cor} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="text-center mt-3">
-            <span className="text-3xl font-bold text-blue-400">{eficienciaRecepcao}%</span>
+            <span className="text-3xl font-bold text-blue-400">{eficienciaRecepcaoSet}%</span>
             <span className="text-sm text-gray-400 ml-2">positiva</span>
           </div>
         </div>
 
-        {/* TOP 5 ATLETAS */}
+        {/* TOP 5 ATLETAS (GLOBAL) */}
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4 text-purple-400">🏆 Top 5 Pontuadores</h3>
-          <div className="space-y-3">
-            {top5Atletas.map((atleta, idx) => (
-              <div key={atleta.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                    idx === 0 ? 'bg-yellow-500 text-black' :
-                    idx === 1 ? 'bg-gray-400 text-black' :
-                    idx === 2 ? 'bg-orange-600 text-white' :
-                    'bg-gray-600 text-white'
-                  }`}>
-                    {idx + 1}
+          <h3 className="font-bold text-lg mb-4 text-purple-400">🏆 Top 5 Pontuadores (Jogo)</h3>
+          
+          {top5Atletas.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-sm">Ainda sem pontos registados</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {top5Atletas.map((atleta, idx) => (
+                <div key={atleta.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                      idx === 0 ? 'bg-yellow-500 text-black' :
+                      idx === 1 ? 'bg-gray-400 text-black' :
+                      idx === 2 ? 'bg-orange-600 text-white' :
+                      'bg-gray-600 text-white'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <span className="font-medium text-sm">{atleta.nome}</span>
                   </div>
-                  <span className="font-medium text-sm">{atleta.nome}</span>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-blue-400">{atleta.pontos}</div>
+                    <div className="text-xs text-gray-400">pontos</div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-400">{atleta.pontos}</div>
-                  <div className="text-xs text-gray-400">pontos</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* ========== EVOLUÇÃO DE PONTOS ========== */}
-      {evolucaoPontos.length > 2 && (
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold text-xl mb-4 text-blue-400">📈 Evolução de Pontos</h3>
-          
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={evolucaoPontos}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="momento" 
-                stroke="#9CA3AF"
-                tick={{ fill: '#9CA3AF' }}
-                label={{ value: 'Sequência de jogadas', position: 'insideBottom', offset: -5, fill: '#9CA3AF' }}
-              />
-              <YAxis 
-                stroke="#9CA3AF"
-                tick={{ fill: '#9CA3AF' }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1F2937', 
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#fff'
-                }}
-              />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="nos" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                name={jogo.equipa}
-                dot={{ fill: '#3B82F6', r: 5 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="adversario" 
-                stroke="#EF4444" 
-                strokeWidth={3}
-                name={jogo.adversario}
-                dot={{ fill: '#EF4444', r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       {/* ========== ÚLTIMAS AÇÕES ========== */}
       <div className="bg-gray-800 rounded-xl p-6">

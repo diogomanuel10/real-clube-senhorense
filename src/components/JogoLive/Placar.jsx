@@ -7,6 +7,7 @@ export default function Placar({ jogo, resultado, onEditarResultado, onAtualizar
       <button
         onClick={onEditarResultado}
         className="absolute right-2 top-2 p-1 text-gray-400 hover:text-white z-10"
+        title="Editar resultado manualmente"
       >
         <Edit className="w-4 h-4" />
       </button>
@@ -28,7 +29,7 @@ export default function Placar({ jogo, resultado, onEditarResultado, onAtualizar
               className="flex-1 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition active:scale-95 flex items-center justify-center gap-1 font-bold text-sm"
             >
               <Minus className="w-4 h-4" />
-              1
+              -1
             </button>
             
             <button
@@ -36,7 +37,7 @@ export default function Placar({ jogo, resultado, onEditarResultado, onAtualizar
               className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition active:scale-95 flex items-center justify-center gap-1 font-bold text-sm"
             >
               <Plus className="w-4 h-4" />
-              1
+              +1
             </button>
           </div>
         </div>
@@ -60,7 +61,7 @@ export default function Placar({ jogo, resultado, onEditarResultado, onAtualizar
               className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition active:scale-95 flex items-center justify-center gap-1 font-bold text-sm"
             >
               <Minus className="w-4 h-4" />
-              1
+              -1
             </button>
             
             <button
@@ -68,7 +69,7 @@ export default function Placar({ jogo, resultado, onEditarResultado, onAtualizar
               className="flex-1 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition active:scale-95 flex items-center justify-center gap-1 font-bold text-sm"
             >
               <Plus className="w-4 h-4" />
-              1
+              +1
             </button>
           </div>
         </div>

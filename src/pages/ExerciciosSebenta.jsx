@@ -35,7 +35,7 @@ export default function ExerciciosSebenta({ user }) {
   const [showModal, setShowModal] = useState(false);
   const [exercicioSelecionado, setExercicioSelecionado] = useState(null);
 
-  const podeEditar = permissions.isAdmin || permissions.isDirecao || permissions.isFisio;
+  const podeEditar = permissions.isAdmin || permissions.isDirecao || permissions.isTreinador || permissions.isFisio;
 
   useEffect(() => {
     if (!permissions.loading) {

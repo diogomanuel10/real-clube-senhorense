@@ -25,7 +25,16 @@ export function useJogoLive(jogoId) {
   const [historico, setHistorico] = useState([]);
   const [setAtual, setSetAtual] = useState(1);
   const [atletasEmCampo, setAtletasEmCampo] = useState([]);
-  const [resultadoTemp, setResultadoTemp] = useState({ nos: 0, adversario: 0 });
+  
+  // NOVO: Resultado por set
+  const [resultadosPorSet, setResultadosPorSet] = useState({
+    1: { nos: 0, adversario: 0 },
+    2: { nos: 0, adversario: 0 },
+    3: { nos: 0, adversario: 0 },
+    4: { nos: 0, adversario: 0 },
+    5: { nos: 0, adversario: 0 },
+  });
+  
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -49,10 +58,12 @@ export function useJogoLive(jogoId) {
             : new Date(docSnap.data().data),
         };
         setJogo(jogoData);
-        setResultadoTemp({
-          nos: jogoData.resultado?.nos || 0,
-          adversario: jogoData.resultado?.adversario || 0,
-        });
+        
+        // Carregar resultados por set se existirem
+        if (jogoData.resultadosPorSet) {
+          setResultadosPorSet(jogoData.resultadosPorSet);
+        }
+        
         await loadAtletas(jogoData.equipa);
       } else {
         toast.error('Jogo não encontrado');
@@ -111,9 +122,39 @@ export function useJogoLive(jogoId) {
       data.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
       setHistorico(data);
       recalcularStats(data);
+      recalcularResultadosPorSet(data);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
     }
+  };
+
+  const recalcularResultadosPorSet = (acoes) => {
+    const novoResultado = {
+      1: { nos: 0, adversario: 0 },
+      2: { nos: 0, adversario: 0 },
+      3: { nos: 0, adversario: 0 },
+      4: { nos: 0, adversario: 0 },
+      5: { nos: 0, adversario: 0 },
+    };
+
+    acoes.forEach((acao) => {
+      const set = acao.set || 1;
+      
+      if (!novoResultado[set]) {
+        novoResultado[set] = { nos: 0, adversario: 0 };
+      }
+
+      // Pontos para NÓS
+      if (['ataque_ponto', 'servico_ace', 'bloco_ponto', 'erro_adversario'].includes(acao.tipo)) {
+        novoResultado[set].nos++;
+      }
+      // Pontos para ADVERSÁRIO
+      else if (['erro_equipa', 'ponto_adversario', 'ataque_erro', 'servico_erro'].includes(acao.tipo)) {
+        novoResultado[set].adversario++;
+      }
+    });
+
+    setResultadosPorSet(novoResultado);
   };
 
   const recalcularStats = (acoes) => {
@@ -137,7 +178,6 @@ export function useJogoLive(jogoId) {
       if (newStats[acao.atletaId]) {
         const tipo = acao.tipo;
 
-        // ATAQUE
         if (tipo === 'ataque_ponto') {
           newStats[acao.atletaId].ataques += 1;
           newStats[acao.atletaId].ataquesEficazes += 1;
@@ -148,25 +188,19 @@ export function useJogoLive(jogoId) {
           newStats[acao.atletaId].ataques += 1;
           newStats[acao.atletaId].erros += 1;
           newStats[acao.atletaId].errosAtaque += 1;
-        }
-        // SERVIÇO
-        else if (tipo === 'servico_ace') {
+        } else if (tipo === 'servico_ace') {
           newStats[acao.atletaId].aces += 1;
           newStats[acao.atletaId].pontos += 1;
         } else if (tipo === 'servico_erro') {
           newStats[acao.atletaId].erros += 1;
           newStats[acao.atletaId].errosServico += 1;
-        }
-        // BLOCO
-        else if (tipo === 'bloco_ponto') {
+        } else if (tipo === 'bloco_ponto') {
           newStats[acao.atletaId].bloqueios += 1;
           newStats[acao.atletaId].pontos += 1;
-        }
-        // DEFESA
-        else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
+        } else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
           newStats[acao.atletaId].defesas += 1;
         }
-        // COMPATIBILIDADE COM SISTEMA ANTIGO
+        // Compatibilidade com sistema antigo
         else if (tipo === 'ace') {
           newStats[acao.atletaId].aces += 1;
           newStats[acao.atletaId].pontos += 1;
@@ -207,12 +241,12 @@ export function useJogoLive(jogoId) {
       };
 
       const docRef = await addDoc(collection(db, 'acoes_jogo'), acao);
-      setHistorico([{ id: docRef.id, ...acao }, ...historico]);
+      const novoHistorico = [{ id: docRef.id, ...acao }, ...historico];
+      setHistorico(novoHistorico);
 
-      // Atualizar stats locais
+      // Atualizar stats
       const newStats = { ...stats };
       
-      // ATAQUE
       if (tipo === 'ataque_ponto') {
         newStats[atletaId].ataques += 1;
         newStats[atletaId].ataquesEficazes += 1;
@@ -223,26 +257,35 @@ export function useJogoLive(jogoId) {
         newStats[atletaId].ataques += 1;
         newStats[atletaId].erros += 1;
         newStats[atletaId].errosAtaque += 1;
-      }
-      // SERVIÇO
-      else if (tipo === 'servico_ace') {
+      } else if (tipo === 'servico_ace') {
         newStats[atletaId].aces += 1;
         newStats[atletaId].pontos += 1;
       } else if (tipo === 'servico_erro') {
         newStats[atletaId].erros += 1;
         newStats[atletaId].errosServico += 1;
-      }
-      // BLOCO
-      else if (tipo === 'bloco_ponto') {
+      } else if (tipo === 'bloco_ponto') {
         newStats[atletaId].bloqueios += 1;
         newStats[atletaId].pontos += 1;
-      }
-      // DEFESA
-      else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
+      } else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
         newStats[atletaId].defesas += 1;
       }
 
       setStats(newStats);
+
+      // Atualizar resultado do set atual
+      const novosResultados = { ...resultadosPorSet };
+      if (['ataque_ponto', 'servico_ace', 'bloco_ponto'].includes(tipo)) {
+        novosResultados[setAtual].nos++;
+      }
+
+      setResultadosPorSet(novosResultados);
+      
+      // Guardar no Firestore
+      await updateDoc(doc(db, 'jogos', jogoId), {
+        resultadosPorSet: novosResultados,
+        updatedAt: Timestamp.now(),
+      });
+
       toast.success('✓', { duration: 500 });
     } catch (error) {
       console.error('Erro:', error);
@@ -262,37 +305,23 @@ export function useJogoLive(jogoId) {
       };
 
       const docRef = await addDoc(collection(db, 'acoes_jogo'), acao);
-      setHistorico([{ id: docRef.id, ...acao }, ...historico]);
+      const novoHistorico = [{ id: docRef.id, ...acao }, ...historico];
+      setHistorico(novoHistorico);
 
-      // Atualizar resultado automaticamente
+      const novosResultados = { ...resultadosPorSet };
+
       if (tipo === 'erro_adversario') {
-        const novoResultado = { ...resultadoTemp, nos: resultadoTemp.nos + 1 };
-        setResultadoTemp(novoResultado);
-        await updateDoc(doc(db, 'jogos', jogoId), {
-          resultado: novoResultado,
-          updatedAt: Timestamp.now(),
-        });
-      } else if (tipo === 'ponto_adversario') {
-        const novoResultado = {
-          ...resultadoTemp,
-          adversario: resultadoTemp.adversario + 1,
-        };
-        setResultadoTemp(novoResultado);
-        await updateDoc(doc(db, 'jogos', jogoId), {
-          resultado: novoResultado,
-          updatedAt: Timestamp.now(),
-        });
-      } else if (tipo === 'erro_equipa') {
-        const novoResultado = {
-          ...resultadoTemp,
-          adversario: resultadoTemp.adversario + 1,
-        };
-        setResultadoTemp(novoResultado);
-        await updateDoc(doc(db, 'jogos', jogoId), {
-          resultado: novoResultado,
-          updatedAt: Timestamp.now(),
-        });
+        novosResultados[setAtual].nos++;
+      } else if (tipo === 'ponto_adversario' || tipo === 'erro_equipa') {
+        novosResultados[setAtual].adversario++;
       }
+
+      setResultadosPorSet(novosResultados);
+
+      await updateDoc(doc(db, 'jogos', jogoId), {
+        resultadosPorSet: novosResultados,
+        updatedAt: Timestamp.now(),
+      });
 
       toast.success('✓', { duration: 500 });
     } catch (error) {
@@ -314,6 +343,14 @@ export function useJogoLive(jogoId) {
       const novoHistorico = historico.slice(1);
       setHistorico(novoHistorico);
       recalcularStats(novoHistorico);
+      recalcularResultadosPorSet(novoHistorico);
+
+      // Atualizar Firestore
+      const novosResultados = { ...resultadosPorSet };
+      await updateDoc(doc(db, 'jogos', jogoId), {
+        resultadosPorSet: novosResultados,
+        updatedAt: Timestamp.now(),
+      });
 
       toast.success('Desfeito');
     } catch (error) {
@@ -334,15 +371,19 @@ export function useJogoLive(jogoId) {
     }
   };
 
-  const atualizarResultado = async (novoResultado) => {
+  const atualizarResultadoSet = async (set, novoResultado) => {
     try {
+      const novosResultados = {
+        ...resultadosPorSet,
+        [set]: novoResultado,
+      };
+
       await updateDoc(doc(db, 'jogos', jogoId), {
-        resultado: novoResultado,
+        resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
 
-      setJogo({ ...jogo, resultado: novoResultado });
-      setResultadoTemp(novoResultado);
+      setResultadosPorSet(novosResultados);
       toast.success('Resultado atualizado!');
     } catch (error) {
       console.error('Erro:', error);
@@ -352,25 +393,22 @@ export function useJogoLive(jogoId) {
 
   const adicionarPonto = async (equipa, valor = 1) => {
     try {
-      const novoValor = resultadoTemp[equipa] + valor;
+      const novosResultados = { ...resultadosPorSet };
+      const novoValor = novosResultados[setAtual][equipa] + valor;
       
       if (novoValor < 0) {
         toast.error('Pontuação não pode ser negativa');
         return;
       }
 
-      const novoResultado = {
-        ...resultadoTemp,
-        [equipa]: novoValor,
-      };
+      novosResultados[setAtual][equipa] = novoValor;
 
       await updateDoc(doc(db, 'jogos', jogoId), {
-        resultado: novoResultado,
+        resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
 
-      setResultadoTemp(novoResultado);
-      setJogo({ ...jogo, resultado: novoResultado });
+      setResultadosPorSet(novosResultados);
       
       toast.success(valor > 0 ? '✓ +1' : '✓ -1', { duration: 500 });
     } catch (error) {
@@ -379,28 +417,9 @@ export function useJogoLive(jogoId) {
     }
   };
 
-  const resetarSetEPlacar = async (novoSet) => {
-    if (!confirm(`Iniciar Set ${novoSet}? Isto vai resetar o placar.`)) {
-      return;
-    }
-
-    try {
-      const resultadoZero = { nos: 0, adversario: 0 };
-      
-      await updateDoc(doc(db, 'jogos', jogoId), {
-        resultado: resultadoZero,
-        updatedAt: Timestamp.now(),
-      });
-
-      setResultadoTemp(resultadoZero);
-      setJogo({ ...jogo, resultado: resultadoZero });
-      setSetAtual(novoSet);
-      
-      toast.success(`Set ${novoSet} iniciado!`);
-    } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao resetar');
-    }
+  const mudarSet = (novoSet) => {
+    setSetAtual(novoSet);
+    toast.success(`Set ${novoSet}`);
   };
 
   const finalizarJogo = async () => {
@@ -409,9 +428,17 @@ export function useJogoLive(jogoId) {
     const loadingToast = toast.loading('A guardar...');
 
     try {
+      // Calcular resultado final (soma de sets ganhos)
+      const setsGanhos = { nos: 0, adversario: 0 };
+      Object.values(resultadosPorSet).forEach((resultado) => {
+        if (resultado.nos > resultado.adversario) setsGanhos.nos++;
+        else if (resultado.adversario > resultado.nos) setsGanhos.adversario++;
+      });
+
       await updateDoc(doc(db, 'jogos', jogoId), {
         estado: 'finalizado',
-        resultado: resultadoTemp,
+        resultadosPorSet: resultadosPorSet,
+        resultado: setsGanhos,
         updatedAt: Timestamp.now(),
       });
 
@@ -453,18 +480,17 @@ export function useJogoLive(jogoId) {
     loading,
     historico,
     setAtual,
-    setSetAtual,
+    setSetAtual: mudarSet,
     atletasEmCampo,
-    resultadoTemp,
-    setResultadoTemp,
+    resultadosPorSet,
+    resultadoSetAtual: resultadosPorSet[setAtual],
     stats,
     registarAcao,
     registarAcaoGeral,
     desfazerUltima,
     toggleAtletaEmCampo,
-    atualizarResultado,
+    atualizarResultadoSet,
     adicionarPonto,
-    resetarSetEPlacar,
     finalizarJogo,
   };
 }

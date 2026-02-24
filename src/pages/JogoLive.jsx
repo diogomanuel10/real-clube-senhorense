@@ -8,7 +8,6 @@ import {
   Save,
   RotateCcw,
   Users,
-  Edit,
   BarChart3
 } from 'lucide-react';
 
@@ -23,7 +22,7 @@ export default function JogoLive({ user }) {
   const permissions = usePermissions(user);
   const navigate = useNavigate();
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [atletaSelecionado, setAtletaSelecionado] = useState(null);
+
   const {
     jogo,
     atletas,
@@ -32,22 +31,22 @@ export default function JogoLive({ user }) {
     setAtual,
     setSetAtual,
     atletasEmCampo,
-    resultadoTemp,
-    setResultadoTemp,
+    resultadosPorSet,
+    resultadoSetAtual,
     stats,
     registarAcao,
     registarAcaoGeral,
     desfazerUltima,
     toggleAtletaEmCampo,
-    atualizarResultado,
+    atualizarResultadoSet,
     adicionarPonto,
-    resetarSetEPlacar,
     finalizarJogo,
   } = useJogoLive(jogoId);
 
   const [showSubstituicoes, setShowSubstituicoes] = useState(false);
   const [showEditarResultado, setShowEditarResultado] = useState(false);
   const [resultadoEdit, setResultadoEdit] = useState({ nos: 0, adversario: 0 });
+  const [atletaSelecionado, setAtletaSelecionado] = useState(null);
 
   if (permissions.loading || loading || !jogo) {
     return (
@@ -85,6 +84,19 @@ export default function JogoLive({ user }) {
             </button>
 
             <div className="flex items-center gap-2">
+              {jogo.videoUrl && (
+                <a
+                  href={jogo.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-red-600 hover:bg-red-700 rounded-lg"
+                  title="Ver vídeo no YouTube"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                </a>
+              )}
 
               <button
                 onClick={() => setShowAnalytics(!showAnalytics)}
@@ -95,12 +107,7 @@ export default function JogoLive({ user }) {
 
               <select
                 value={setAtual}
-                onChange={(e) => {
-                  const novoSet = Number(e.target.value);
-                  if (novoSet !== setAtual) {
-                    resetarSetEPlacar(novoSet);
-                  }
-                }}
+                onChange={(e) => setSetAtual(Number(e.target.value))}
                 className="px-3 py-2 bg-gray-700 rounded-lg text-sm font-bold"
               >
                 <option value={1}>Set 1</option>
@@ -136,20 +143,18 @@ export default function JogoLive({ user }) {
 
           <Placar
             jogo={jogo}
-            resultado={resultadoTemp}
+            resultado={resultadoSetAtual}
             onEditarResultado={() => {
-              setResultadoEdit(resultadoTemp);
+              setResultadoEdit(resultadoSetAtual);
               setShowEditarResultado(true);
             }}
-            onAtualizarPontos={(equipa, valor) => adicionarPonto(equipa, valor)} // ← MUDA AQUI
+            onAtualizarPontos={adicionarPonto}
           />
-
         </div>
       </header>
 
       {/* MAIN */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-
         {/* BOTÕES GERAIS */}
         <BotoesGerais
           onErroEquipa={() => registarAcaoGeral('erro_equipa')}
@@ -186,7 +191,6 @@ export default function JogoLive({ user }) {
               />
             ))}
 
-
             {atletasNoBanco.length > 0 && (
               <div className="pt-6 border-t border-gray-700">
                 <h2 className="text-lg font-bold text-gray-400 mb-3">
@@ -211,16 +215,6 @@ export default function JogoLive({ user }) {
           </div>
         )}
       </main>
-
-      {/* MODAL AÇÕES ATLETA */}
-      {atletaSelecionado && (
-        <ModalAcoes
-          atleta={atletaSelecionado}
-          onClose={() => setAtletaSelecionado(null)}
-          onRegistarAcao={registarAcao}
-        />
-      )}
-
 
       {/* MODAL ANALYTICS */}
       {showAnalytics && (
@@ -247,7 +241,7 @@ export default function JogoLive({ user }) {
               historico={historico}
               setAtual={setAtual}
               jogo={jogo}
-              resultado={resultadoTemp}
+              resultadosPorSet={resultadosPorSet}
             />
           </div>
         </div>
@@ -263,7 +257,7 @@ export default function JogoLive({ user }) {
             className="bg-gray-800 rounded-2xl w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-bold mb-4">Editar Resultado</h2>
+            <h2 className="text-xl font-bold mb-4">Editar Resultado do Set {setAtual}</h2>
 
             <div className="space-y-4">
               <div>
@@ -312,7 +306,7 @@ export default function JogoLive({ user }) {
               </button>
               <button
                 onClick={() => {
-                  atualizarResultado(resultadoEdit);
+                  atualizarResultadoSet(setAtual, resultadoEdit);
                   setShowEditarResultado(false);
                 }}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold"
@@ -346,10 +340,11 @@ export default function JogoLive({ user }) {
                   <button
                     key={atleta.id}
                     onClick={() => toggleAtletaEmCampo(atleta.id)}
-                    className={`p-4 rounded-lg text-left transition ${emCampo
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
+                    className={`p-4 rounded-lg text-left transition ${
+                      emCampo
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
                   >
                     <div className="font-bold">{atleta.nome}</div>
                     <div className="text-xs opacity-75">
@@ -369,6 +364,15 @@ export default function JogoLive({ user }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL AÇÕES ATLETA */}
+      {atletaSelecionado && (
+        <ModalAcoes
+          atleta={atletaSelecionado}
+          onClose={() => setAtletaSelecionado(null)}
+          onRegistarAcao={registarAcao}
+        />
       )}
     </div>
   );
