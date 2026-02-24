@@ -283,6 +283,38 @@ export default function JogoEstatisticas({ user }) {
     );
   }
 
+  const calcularMVP = () => {
+    if (estatisticas.length === 0) return null;
+
+    const pontuacoes = estatisticas.map(atleta => {
+      const pontos = atleta.pontos || 0;
+      const aces = (atleta.aces || 0) * 2;
+      const bloqueios = (atleta.bloqueios || 0) * 2;
+      const defesas = (atleta.defesas || 0) * 0.5;
+      const erros = (atleta.erros || 0) * -1.5;
+
+      const eficienciaAtaque = atleta.ataques > 0
+        ? ((atleta.ataquesEficazes || 0) / atleta.ataques) * 100
+        : 0;
+      const bonusEficiencia = eficienciaAtaque > 40 ? 5 : 0;
+
+      const pontuacaoFinal = pontos + aces + bloqueios + defesas + erros + bonusEficiencia;
+
+      return {
+        ...atleta,
+        pontuacaoMVP: pontuacaoFinal,
+        eficienciaAtaque,
+      };
+    });
+
+    return pontuacoes.reduce((melhor, atual) =>
+      atual.pontuacaoMVP > melhor.pontuacaoMVP ? atual : melhor
+    );
+  };
+
+  // AGORA SIM, chama a função:
+  const mvp = calcularMVP();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* HEADER */}
@@ -304,13 +336,13 @@ export default function JogoEstatisticas({ user }) {
               </div>
             </div>
 
-            {(permissions.isAdmin || permissions.isDirecao || 
+            {(permissions.isAdmin || permissions.isDirecao ||
               (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
-              <button onClick={abrirModalAdicionar} className="btn-primary text-sm">
-                <Plus className="w-4 h-4" />
-                Adicionar Stats
-              </button>
-            )}
+                <button onClick={abrirModalAdicionar} className="btn-primary text-sm">
+                  <Plus className="w-4 h-4" />
+                  Adicionar Stats
+                </button>
+              )}
           </div>
 
           {/* Placar */}
@@ -364,61 +396,143 @@ export default function JogoEstatisticas({ user }) {
           </div>
         </div>
 
-        {/* TOP PERFORMERS */}
+        {/* MVP + TOP PERFORMERS */}
         {estatisticas.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                Top Pontuadores
-              </h3>
-              <div className="space-y-3">
-                {topPontos.map((stat, idx) => (
-                  <div key={stat.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      {idx + 1}. {stat.atletaNome}
-                    </span>
-                    <span className="font-bold text-gray-900">{stat.pontos}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <>
+            {/* MVP */}
+            {mvp && (
+              <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-xl p-6 text-white shadow-xl mb-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24" />
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" />
-                Top Aces
-              </h3>
-              <div className="space-y-3">
-                {topAces.map((stat, idx) => (
-                  <div key={stat.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      {idx + 1}. {stat.atletaNome}
-                    </span>
-                    <span className="font-bold text-gray-900">{stat.aces}</span>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                        <Trophy className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold">MVP do Jogo</h2>
+                        <p className="text-white/80 text-sm">Melhor em Campo</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-4xl font-black">{mvp.pontos}</p>
+                      <p className="text-white/80 text-sm">pontos</p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-red-500" />
-                Top Bloqueios
-              </h3>
-              <div className="space-y-3">
-                {topBloqueios.map((stat, idx) => (
-                  <div key={stat.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      {idx + 1}. {stat.atletaNome}
-                    </span>
-                    <span className="font-bold text-gray-900">{stat.bloqueios}</span>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
+                    <p className="text-3xl font-bold mb-1">{mvp.atletaNome}</p>
+                    {mvp.titular && (
+                      <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm">
+                        Titular
+                      </span>
+                    )}
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">{mvp.aces || 0}</p>
+                      <p className="text-white/80 text-xs">Aces</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">{mvp.bloqueios || 0}</p>
+                      <p className="text-white/80 text-xs">Blocos</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">{mvp.ataquesEficazes || 0}/{mvp.ataques || 0}</p>
+                      <p className="text-white/80 text-xs">Ataques</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">
+                        {mvp.ataques > 0 ? mvp.eficienciaAtaque.toFixed(0) : 0}%
+                      </p>
+                      <p className="text-white/80 text-xs">Eficiência</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">{mvp.defesas || 0}</p>
+                      <p className="text-white/80 text-xs">Defesas</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TOP PERFORMERS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  Top Pontuadores
+                </h3>
+                <div className="space-y-3">
+                  {topPontos.map((stat, idx) => (
+                    <div key={stat.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :
+                          idx === 1 ? 'bg-gray-100 text-gray-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-gray-700">{stat.atletaNome}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{stat.pontos}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  Top Aces
+                </h3>
+                <div className="space-y-3">
+                  {topAces.map((stat, idx) => (
+                    <div key={stat.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :
+                          idx === 1 ? 'bg-gray-100 text-gray-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-gray-700">{stat.atletaNome}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{stat.aces}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-red-500" />
+                  Top Bloqueios
+                </h3>
+                <div className="space-y-3">
+                  {topBloqueios.map((stat, idx) => (
+                    <div key={stat.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :
+                          idx === 1 ? 'bg-gray-100 text-gray-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-gray-700">{stat.atletaNome}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{stat.bloqueios}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
+
 
         {/* TABELA DE ESTATÍSTICAS */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -442,13 +556,13 @@ export default function JogoEstatisticas({ user }) {
               <p className="text-gray-600 mb-4">
                 Ainda não foram adicionadas estatísticas para este jogo
               </p>
-              {(permissions.isAdmin || permissions.isDirecao || 
+              {(permissions.isAdmin || permissions.isDirecao ||
                 (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
-                <button onClick={abrirModalAdicionar} className="btn-primary text-sm">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Estatísticas
-                </button>
-              )}
+                  <button onClick={abrirModalAdicionar} className="btn-primary text-sm">
+                    <Plus className="w-4 h-4" />
+                    Adicionar Estatísticas
+                  </button>
+                )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -476,66 +590,76 @@ export default function JogoEstatisticas({ user }) {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                       Erros
                     </th>
-                    {(permissions.isAdmin || permissions.isDirecao || 
+                    {(permissions.isAdmin || permissions.isDirecao ||
                       (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                        Ações
-                      </th>
-                    )}
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                          Ações
+                        </th>
+                      )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {estatisticas.map((stat) => (
-                    <tr key={stat.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{stat.atletaNome}</span>
-                          {stat.titular && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              Titular
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center font-semibold text-gray-900">
-                        {stat.pontos || 0}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {stat.aces || 0}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {stat.bloqueios || 0}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {stat.ataquesEficazes || 0}/{stat.ataques || 0}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {stat.defesas || 0}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {stat.erros || 0}
-                      </td>
-                      {(permissions.isAdmin || permissions.isDirecao || 
-                        (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
+                  {estatisticas.map((stat) => {
+                    const isMVP = mvp && stat.id === mvp.id; // ← ADICIONA ESTA LINHA
+
+                    return (
+                      <tr key={stat.id} className={`${isMVP ? 'bg-yellow-50 border-l-4 border-yellow-500' : 'hover:bg-gray-50'}`}>
                         <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => abrirModalEditar(stat)}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(stat.id)}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                          <div className="flex items-center gap-2">
+                            {isMVP && <Trophy className="w-4 h-4 text-yellow-500" />}
+                            <span className="font-medium text-gray-900">{stat.atletaNome}</span>
+                            {stat.titular && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                Titular
+                              </span>
+                            )}
+                            {isMVP && (
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-bold">
+                                MVP
+                              </span>
+                            )}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td className="px-6 py-4 text-center font-semibold text-gray-900">
+                          {stat.pontos || 0}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700">
+                          {stat.aces || 0}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700">
+                          {stat.bloqueios || 0}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700">
+                          {stat.ataquesEficazes || 0}/{stat.ataques || 0}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700">
+                          {stat.defesas || 0}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700">
+                          {stat.erros || 0}
+                        </td>
+                        {(permissions.isAdmin || permissions.isDirecao ||
+                          (permissions.isTreinador && permissions.equipas.includes(jogo.equipa))) && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => abrirModalEditar(stat)}
+                                  className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(stat.id)}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
