@@ -18,15 +18,36 @@
         }
       ],
       "density": "SPARSE_ALL"
-    },  {
+    },
+    {
+      "collectionGroup": "presencas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "atletaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "avaliacoes_fisicas",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "atletaId", "order": "ASCENDING" },
-        { "fieldPath": "data", "order": "DESCENDING" }
+        {
+          "fieldPath": "atletaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data",
+          "order": "DESCENDING"
+        }
       ]
     },
-      {
+    {
       "collectionGroup": "jogos",
       "queryScope": "COLLECTION",
       "fields": [

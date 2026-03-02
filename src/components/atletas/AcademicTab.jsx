@@ -133,6 +133,7 @@ export default function AcademicTab({ athleteId }) {
     });
   }
 
+  console.log(record);
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
@@ -193,24 +194,24 @@ export default function AcademicTab({ athleteId }) {
       {/* filtros ano/período */}
       <div className="flex flex-wrap items-end gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-slate-700">
             Ano letivo
           </label>
           <input
             type="text"
             value={academicYear}
             onChange={(e) => setAcademicYear(e.target.value)}
-            className="mt-1 block w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+            className="mt-1 block w-40 rounded-lg border border-slate-200  px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-slate-700">
             Período
           </label>
           <select
             value={term}
             onChange={(e) => setTerm(Number(e.target.value))}
-            className="mt-1 block w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+            className="mt-1 block w-40 rounded-lg border border-slate-200  px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
           >
             {TERMS.map((t) => (
               <option key={t.value} value={t.value}>
@@ -230,13 +231,15 @@ export default function AcademicTab({ athleteId }) {
       </div>
 
       {loading && (
-        <p className="text-sm text-slate-500">A carregar dados académicos...</p>
+        <p className="text-sm text-slate-500">
+          A carregar dados académicos...
+        </p>
       )}
 
       {/* resumo */}
       {!loading && record && (
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="col-span-2 rounded-2xl border border-slate-200  p-4 shadow-sm">
             <h3 className="mb-2 text-sm font-semibold text-slate-900">
               Informações escolares
             </h3>
@@ -254,7 +257,7 @@ export default function AcademicTab({ athleteId }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-slate-200  p-4 shadow-sm">
             <h3 className="mb-2 text-sm font-semibold text-slate-900">
               Estado académico
             </h3>
@@ -279,17 +282,18 @@ export default function AcademicTab({ athleteId }) {
       )}
 
       {/* tabela de notas */}
-      {!loading && record && (
+   
+      {!loading && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-semibold text-slate-900">
             Notas por disciplina
           </h3>
-          {(!record.grades || record.grades.length === 0) && (
+
+          {!record || !Array.isArray(record.grades) || record.grades.length === 0 ? (
             <p className="text-sm text-slate-500">
               Sem disciplinas registadas para este período.
             </p>
-          )}
-          {record.grades && record.grades.length > 0 && (
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50">
@@ -311,10 +315,12 @@ export default function AcademicTab({ athleteId }) {
                 <tbody>
                   {record.grades.map((g, idx) => (
                     <tr key={idx} className="border-t">
-                      <td className="px-3 py-1.5">{g.subject}</td>
-                      <td className="px-3 py-1.5">{g.grade ?? "-"}</td>
-                      <td className="px-3 py-1.5">{g.teacher || "-"}</td>
-                      <td className="px-3 py-1.5">
+                      <td className="px-3 py-1.5 text-slate-700">{g.subject || "-"}</td>
+                      <td className="px-3 py-1.5 text-slate-700">
+                        {typeof g.grade === "number" ? g.grade : "-"}
+                      </td>
+                      <td className="px-3 py-1.5 text-slate-700">{g.teacher || "-"}</td>
+                      <td className="px-3 py-1.5 text-slate-700">
                         {g.observations || "-"}
                       </td>
                     </tr>
@@ -326,35 +332,39 @@ export default function AcademicTab({ athleteId }) {
         </div>
       )}
 
+
       {/* modal de formulário */}
       {showForm && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            {/* header */}
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-5 py-3">
-              <h2 className="text-sm font-semibold text-white">
+          <div
+            className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* HEADER IGUAL AO NOVO EPISÓDIO CLÍNICO */}
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-slate-900">
+              <h3 className="text-sm font-semibold text-white">
                 {formData.id
                   ? "Editar registo académico"
                   : "Novo registo académico"}
-              </h2>
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-full p-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 transition"
               >
                 Fechar
               </button>
             </div>
 
-            {/* conteúdo scrollável */}
+            {/* CONTEÚDO */}
             <form
               onSubmit={handleSubmit}
-              className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4"
+              className="p-4 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto"
             >
-              {/* linha 1 */}
+              {/* Linha 1 */}
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-slate-700">
                     Ano letivo
                   </label>
                   <input
@@ -363,11 +373,11 @@ export default function AcademicTab({ athleteId }) {
                     onChange={(e) =>
                       handleFieldChange("academicYear", e.target.value)
                     }
-                    className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-slate-700">
                     Período
                   </label>
                   <select
@@ -375,7 +385,7 @@ export default function AcademicTab({ athleteId }) {
                     onChange={(e) =>
                       handleFieldChange("term", Number(e.target.value))
                     }
-                    className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                   >
                     {TERMS.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -385,7 +395,7 @@ export default function AcademicTab({ athleteId }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-slate-700">
                     Ano escolar
                   </label>
                   <input
@@ -396,14 +406,14 @@ export default function AcademicTab({ athleteId }) {
                     onChange={(e) =>
                       handleFieldChange("schoolYear", e.target.value)
                     }
-                    className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                    className="mt-1 block w-full rounded-lg border border-slate-200  px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
 
-              {/* escola */}
+              {/* Escola */}
               <div>
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-slate-700">
                   Escola
                 </label>
                 <input
@@ -412,13 +422,13 @@ export default function AcademicTab({ athleteId }) {
                   onChange={(e) =>
                     handleFieldChange("schoolName", e.target.value)
                   }
-                  className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                  className="mt-1 block w-full rounded-lg border border-slate-200  px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                 />
               </div>
 
-              {/* assiduidade */}
+              {/* Assiduidade */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-700">
                   Assiduidade escolar
                 </h3>
                 <div className="grid gap-3 md:grid-cols-5">
@@ -430,7 +440,7 @@ export default function AcademicTab({ athleteId }) {
                     ["lateArrivals", "Atrasos"],
                   ].map(([key, label]) => (
                     <div key={key}>
-                      <label className="block text-[11px] font-medium text-slate-600">
+                      <label className="block text-[11px] font-medium text-slate-700">
                         {label}
                       </label>
                       <input
@@ -440,23 +450,23 @@ export default function AcademicTab({ athleteId }) {
                         onChange={(e) =>
                           handleAttendanceChange(key, e.target.value)
                         }
-                        className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                        className="mt-1 block w-full rounded-lg border border-slate-200  px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                       />
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* notas */}
+              {/* Notas */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
                     Notas por disciplina
                   </h3>
                   <button
                     type="button"
                     onClick={addGradeRow}
-                    className="rounded-lg bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                    className="rounded-lg  px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                   >
                     + Adicionar disciplina
                   </button>
@@ -470,57 +480,50 @@ export default function AcademicTab({ athleteId }) {
                   {formData.grades.map((g, index) => (
                     <div
                       key={index}
-                      className="grid gap-2 rounded-lg bg-white p-2 md:grid-cols-4"
+                      className="space-y-2 rounded-lg bg-white p-2 md:p-3 border border-slate-200"
                     >
-                      <input
-                        type="text"
-                        placeholder="Disciplina"
-                        value={g.subject}
-                        onChange={(e) =>
-                          updateGradeRow(index, "subject", e.target.value)
-                        }
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Nota (0-20)"
-                        min={0}
-                        max={20}
-                        value={g.grade}
-                        onChange={(e) =>
-                          updateGradeRow(index, "grade", e.target.value)
-                        }
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Professor"
-                        value={g.teacher}
-                        onChange={(e) =>
-                          updateGradeRow(index, "teacher", e.target.value)
-                        }
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-                      />
-                      <div className="flex gap-2">
+                      <div className="grid gap-2 md:grid-cols-4">
+                        <input
+                          type="text"
+                          placeholder="Disciplina"
+                          value={g.subject}
+                          onChange={(e) => updateGradeRow(index, "subject", e.target.value)}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Nota (0-20)"
+                          min={0}
+                          max={20}
+                          value={g.grade}
+                          onChange={(e) => updateGradeRow(index, "grade", e.target.value)}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Professor"
+                          value={g.teacher}
+                          onChange={(e) => updateGradeRow(index, "teacher", e.target.value)}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                        />
                         <input
                           type="text"
                           placeholder="Observações"
                           value={g.observations}
                           onChange={(e) =>
-                            updateGradeRow(
-                              index,
-                              "observations",
-                              e.target.value
-                            )
+                            updateGradeRow(index, "observations", e.target.value)
                           }
-                          className="flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                         />
+                      </div>
+
+                      <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => removeGradeRow(index)}
-                          className="rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 hover:bg-red-100"
+                          className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
                         >
-                          Remover
+                          Remover disciplina
                         </button>
                       </div>
                     </div>
@@ -528,9 +531,9 @@ export default function AcademicTab({ athleteId }) {
                 </div>
               </div>
 
-              {/* observações */}
+              {/* Observações */}
               <div>
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-slate-700">
                   Observações gerais
                 </label>
                 <textarea
@@ -539,23 +542,23 @@ export default function AcademicTab({ athleteId }) {
                   onChange={(e) =>
                     handleFieldChange("generalObservations", e.target.value)
                   }
-                  className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+                  className="mt-1 block w-full rounded-lg border border-slate-200  px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                 />
               </div>
 
-              {/* footer do form */}
-              <div className="flex justify-end gap-2 pt-2">
+              {/* FOOTER */}
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg  border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
                 >
                   {loading ? "A guardar..." : "Guardar"}
                 </button>

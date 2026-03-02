@@ -35,11 +35,27 @@ export async function getAcademicRecord(athleteId, academicYear, term) {
     where("academicYear", "==", academicYear),
     where("term", "==", term)
   );
+
   const snap = await getDocs(q);
   if (snap.empty) return null;
+
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  const data = d.data();
+
+  return {
+    id: d.id,
+    academicYear: data.academicYear,
+    term: data.term,
+    schoolName: data.schoolName ?? "",
+    schoolYear: data.schoolYear ?? null,
+    generalObservations: data.generalObservations ?? "",
+    finalAverage: data.finalAverage ?? null,
+    academicStatus: data.academicStatus ?? null,
+    attendance: data.attendance ?? null,
+    grades: Array.isArray(data.grades) ? data.grades : [], // <--- garante array
+  };
 }
+
 
 export async function getAcademicRecordsByAthlete(athleteId) {
   const colRef = collection(db, "atletas", athleteId, "academico");
