@@ -639,7 +639,7 @@ export default function AtletaPerfil({ user }) {
           )}
 
           {/* TAB FISIO */}
-         {tab === "fisio" && <FisioterapiaTab atleta={atleta} user={user} />}
+          {tab === "fisio" && <FisioterapiaTab atleta={atleta} user={user} />}
 
           {tab === "preparacao-fisica" && (
             <PreparacaoFisicaTab atleta={atleta} user={user} />
@@ -648,12 +648,37 @@ export default function AtletaPerfil({ user }) {
           {/* TAB PRESENÇAS */}
           {tab === "presencas" && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
+              {/* ← NOVO: KPIs DE ATRASOS */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 p-4 bg-slate-100 rounded-xl border border-orange-200">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-700">{presencasAtleta.filter(p => p.estado === 'presente').length}</p>
+                  <p className="text-xs text-orange-800 uppercase tracking-wide">Presentes</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-600">
+                    {presencasAtleta.filter(p => p.estado === 'atraso').length}
+                  </p>
+                  <p className="text-xs text-orange-700 uppercase tracking-wide">Atrasos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">{presencasAtleta.filter(p => p.estado === 'falta').length}</p>
+                  <p className="text-xs text-red-500 uppercase tracking-wide">Faltas</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-600">
+                    {Math.round(presencasAtleta.length > 0 ?
+                      (presencasAtleta.filter(p => p.estado === 'presente' || p.estado === 'atraso').length / presencasAtleta.length * 100) : 0)}%
+                  </p>
+                  <p className="text-xs text-amber-500 uppercase tracking-wide">Assiduidade</p>
+                </div>
+              </div>
+
               <div>
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                  Presenças em treinos
+                  Histórico de Presenças
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  Histórico de presenças, faltas e justificações desta atleta.
+                  Últimos treinos desta atleta (ordenados por data).
                 </p>
               </div>
 
@@ -671,39 +696,47 @@ export default function AtletaPerfil({ user }) {
                       (p.createdAt?.toDate ? p.createdAt.toDate() : null);
 
                     return (
-                      <div
-                        key={p.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2"
-                      >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 gap-2">
                         <div>
                           <p className="text-sm font-medium text-slate-900">
-                            Treino
+                            {p.treino?.equipa || 'Treino sem detalhes'}
                           </p>
                           <p className="text-[11px] sm:text-xs text-slate-500">
-                            {dataTreino
-                              ? new Date(dataTreino).toLocaleString("pt-PT", {
+                            {p.createdAt?.toDate
+                              ? p.createdAt.toDate().toLocaleString("pt-PT", {
                                 dateStyle: "short",
                                 timeStyle: "short",
                               })
-                              : "Sem data registada"}
+                              : "Sem data registada"
+                            }
                           </p>
                         </div>
 
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${p.estado === "presente"
+                        {/* ← STATUS COM ATRASO */}
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${p.estado === "presente"
                             ? "bg-emerald-100 text-emerald-800"
-                            : p.estado === "falta"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-amber-100 text-amber-800"
-                            }`}
-                        >
-                          {p.estado === "presente"
-                            ? "Presente"
-                            : p.estado === "falta"
-                              ? "Falta"
-                              : "Justificada"}
-                        </span>
+                            : p.estado === "atraso"
+                              ? "bg-orange-100 text-orange-800"
+                              : p.estado === "falta"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}>
+                            {p.estado === "presente" && "Presente"}
+                            {p.estado === "atraso" && "⏰ Atraso"}
+                            {p.estado === "falta" && "❌ Falta"}
+                            {p.estado === "justificada" && "✅ Justificada"}
+                          </span>
+
+                          {/* ← MOSTRAR MINUTOS DE ATRASO */}
+                          {p.estado === "atraso" && p.atrasoMinutos && (
+                            <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
+                              {p.atrasoMinutos} min
+                            </span>
+                          )}
+                        </div>
                       </div>
+
                     );
                   })}
                 </div>

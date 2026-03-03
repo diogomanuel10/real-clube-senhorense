@@ -140,11 +140,10 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
                       key={dia.value}
                       type="button"
                       onClick={() => toggleDiaSemana(dia.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                        novoPlano.diasSemana.includes(dia.value)
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${novoPlano.diasSemana.includes(dia.value)
                           ? "bg-blue-600 text-white shadow-md"
                           : "bg-white border border-slate-300 text-slate-700 hover:border-blue-400"
-                      }`}
+                        }`}
                     >
                       {dia.label}
                     </button>
@@ -301,58 +300,71 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
   };
 
   const marcarPresenca = async (atletaId, novoEstado) => {
-    setSavingPresenca(true);
+  setSavingPresenca(true);
 
-    try {
-      const existente = presencas.find(
-        (p) => p.atletaId === atletaId && p.treinoId === treino.id,
-      );
+  try {
+    const existente = presencas.find(
+      (p) => p.atletaId === atletaId && p.treinoId === treino.id,
+    );
+    const agora = new Date();
 
-      const agora = new Date();
-
-      if (novoEstado === null) {
-        if (existente) {
-          await deleteDoc(doc(db, "presencas", existente.id));
-          setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
-        }
-      } else if (existente) {
-        await updateDoc(doc(db, "presencas", existente.id), {
-          estado: novoEstado,
-          updatedAt: agora,
-        });
-        setPresencas((prev) =>
-          prev.map((p) =>
-            p.id === existente.id
-              ? { ...p, estado: novoEstado, updatedAt: agora }
-              : p,
-          ),
-        );
-      } else {
-        const ref = await addDoc(collection(db, "presencas"), {
-          treinoId: treino.id,
-          atletaId,
-          estado: novoEstado,
-          createdAt: agora,
-          updatedAt: agora,
-        });
-        setPresencas((prev) => [
-          ...prev,
-          {
-            id: ref.id,
-            treinoId: treino.id,
-            atletaId,
-            estado: novoEstado,
-            createdAt: agora,
-            updatedAt: agora,
-          },
-        ]);
+    if (novoEstado === null) {
+      if (existente) {
+        await deleteDoc(doc(db, "presencas", existente.id));
+        setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
       }
-    } finally {
-      setSavingPresenca(false);
-    }
-  };
+    } else if (existente) {
+      // ← AQUI A ALTERAÇÃO PRINCIPAL
+      const dadosUpdate = {
+        estado: novoEstado,
+        updatedAt: agora,
+      };
 
-    useEffect(() => {
+      // Se for ATRASO, calcular minutos automaticamente
+      if (novoEstado === "atraso") {
+        const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
+        const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
+        dadosUpdate.atrasoMinutos = Math.max(0, atrasoMinutos);
+        dadosUpdate.nota = `Atraso de ${dadosUpdate.atrasoMinutos} min`;
+      }
+
+      await updateDoc(doc(db, "presencas", existente.id), dadosUpdate);
+      
+      setPresencas((prev) =>
+        prev.map((p) =>
+          p.id === existente.id ? { ...p, ...dadosUpdate } : p
+        )
+      );
+    } else {
+      const dadosNovo = {
+        treinoId: treino.id,
+        atletaId,
+        estado: novoEstado,
+        createdAt: agora,
+        updatedAt: agora,
+      };
+
+      // ATRASO no novo registo também
+      if (novoEstado === "atraso") {
+        const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
+        const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
+        dadosNovo.atrasoMinutos = Math.max(0, atrasoMinutos);
+        dadosNovo.nota = `Atraso de ${dadosNovo.atrasoMinutos} min`;
+      }
+
+      const ref = await addDoc(collection(db, "presencas"), dadosNovo);
+      setPresencas((prev) => [
+        ...prev,
+        { id: ref.id, ...dadosNovo },
+      ]);
+    }
+  } finally {
+    setSavingPresenca(false);
+  }
+};
+
+
+  useEffect(() => {
     carregarAtletas();
   }, [treino]);
 
@@ -393,57 +405,57 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
             treino.planoTreino ||
             treino.fundamento ||
             treino.objetivo) && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
-                <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
-                Detalhes do Treino
-              </h3>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                  Detalhes do Treino
+                </h3>
 
-              {treino.descricao && (
-                <div className="p-4 bg-slate-50 rounded-lg">
-                  <p className="text-xs font-semibold text-slate-600 mb-1">
-                    Descrição
-                  </p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                    {treino.descricao}
-                  </p>
-                </div>
-              )}
+                {treino.descricao && (
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">
+                      Descrição
+                    </p>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                      {treino.descricao}
+                    </p>
+                  </div>
+                )}
 
-              {treino.objetivo && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs font-semibold text-blue-700 mb-1">
-                    🎯 Objetivo
-                  </p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                    {treino.objetivo}
-                  </p>
-                </div>
-              )}
+                {treino.objetivo && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs font-semibold text-blue-700 mb-1">
+                      🎯 Objetivo
+                    </p>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                      {treino.objetivo}
+                    </p>
+                  </div>
+                )}
 
-              {treino.fundamento && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <p className="text-xs font-semibold text-emerald-700 mb-1">
-                    🏐 Fundamento
-                  </p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                    {treino.fundamento}
-                  </p>
-                </div>
-              )}
+                {treino.fundamento && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-xs font-semibold text-emerald-700 mb-1">
+                      🏐 Fundamento
+                    </p>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                      {treino.fundamento}
+                    </p>
+                  </div>
+                )}
 
-              {treino.planoTreino && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">
-                    📋 Plano de Treino
-                  </p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                    {treino.planoTreino}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                {treino.planoTreino && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs font-semibold text-amber-700 mb-1">
+                      📋 Plano de Treino
+                    </p>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                      {treino.planoTreino}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
           {/* Lista de Atletas */}
           <div>
@@ -488,23 +500,34 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
                           type="button"
                           disabled={savingPresenca}
                           onClick={() => marcarPresenca(atleta.id, "presente")}
-                          className={`px-2 py-1 rounded text-xs font-medium border ${
-                            estado === "presente"
+                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "presente"
                               ? "bg-emerald-100 text-emerald-700 border-emerald-300"
                               : "bg-white text-slate-700 border-slate-200"
-                          }`}
+                            }`}
                         >
                           Presente
                         </button>
+
+                        <button
+                          type="button"
+                          disabled={savingPresenca}
+                          onClick={() => marcarPresenca(atleta.id, "atraso")}
+                          className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${estado === "atraso"
+                              ? "bg-orange-100 text-orange-700 border-orange-300"
+                              : "bg-white text-orange-700 border-slate-200 hover:bg-orange-50"
+                            }`}
+                        >
+                          Atraso
+                        </button>
+
                         <button
                           type="button"
                           disabled={savingPresenca}
                           onClick={() => marcarPresenca(atleta.id, "falta")}
-                          className={`px-2 py-1 rounded text-xs font-medium border ${
-                            estado === "falta"
+                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "falta"
                               ? "bg-red-100 text-red-700 border-red-300"
                               : "bg-white text-slate-700 border-slate-200"
-                          }`}
+                            }`}
                         >
                           Falta
                         </button>
@@ -514,11 +537,10 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
                           onClick={() =>
                             marcarPresenca(atleta.id, "justificada")
                           }
-                          className={`px-2 py-1 rounded text-xs font-medium border ${
-                            estado === "justificada"
+                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "justificada"
                               ? "bg-amber-100 text-amber-700 border-amber-300"
                               : "bg-white text-slate-700 border-slate-200"
-                          }`}
+                            }`}
                         >
                           Justificada
                         </button>
