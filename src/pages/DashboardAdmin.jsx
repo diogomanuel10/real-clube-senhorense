@@ -41,7 +41,7 @@ export default function DashboardAdmin({ user }) {
     year: 'numeric',
   });
 
-  const primeiroNome = user?.displayName?.split(' ')[0] || 'Admin';
+  const primeiroNome = user?.displayName?.split(' ')[0] || user?.nome ||  'Admin';
 
   // Calcular total de alertas críticos + atenção
   const alertasUrgentes = (alertas?.criticos?.length || 0) + (alertas?.atencao?.length || 0);

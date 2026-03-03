@@ -14,7 +14,7 @@ import {
 import { db } from "../../utils/firebase";
 import { DIAS_SEMANA } from "../../constants/treinos";
 
-// ========== MODAL PLANOS ==========
+// ========== MODAL PLANOS (já está ok, mas vou melhorar um pouco) ==========
 export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
   const [novoPlano, setNovoPlano] = useState({
     equipa: "",
@@ -72,17 +72,17 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50"
       onClick={onClose}
     >
       <div
         className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+        <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
                 Planos de Treino
               </h2>
               <p className="text-xs text-slate-500 mt-1">
@@ -98,11 +98,11 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Formulário novo plano */}
           <form
             onSubmit={handleCriarPlano}
-            className="border border-slate-200 rounded-xl p-4 bg-slate-50"
+            className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50"
           >
             <h3 className="text-sm font-semibold text-slate-900 mb-3">
               Novo Plano
@@ -140,10 +140,11 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
                       key={dia.value}
                       type="button"
                       onClick={() => toggleDiaSemana(dia.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${novoPlano.diasSemana.includes(dia.value)
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                        novoPlano.diasSemana.includes(dia.value)
                           ? "bg-blue-600 text-white shadow-md"
                           : "bg-white border border-slate-300 text-slate-700 hover:border-blue-400"
-                        }`}
+                      }`}
                     >
                       {dia.label}
                     </button>
@@ -229,26 +230,26 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
                     key={plano.id}
                     className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-white"
                   >
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">
                         {plano.equipa}
                       </p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-slate-600 truncate">
                         {plano.diasSemana
                           .map(
                             (d) =>
-                              DIAS_SEMANA.find((dia) => dia.value === d)?.label,
+                              DIAS_SEMANA.find((dia) => dia.value === d)?.label
                           )
                           .join(", ")}{" "}
                         · {plano.horaInicio}–{plano.horaFim}
                       </p>
                       {plano.local && (
-                        <p className="text-xs text-slate-500">{plano.local}</p>
+                        <p className="text-xs text-slate-500 truncate">{plano.local}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleDeletePlano(plano.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-2 flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -272,13 +273,11 @@ export const ModalPlanos = ({ escaloes, planos, onClose, onUpdate }) => {
   );
 };
 
-// ========== MODAL DETALHES DO TREINO ==========
+// ========== MODAL DETALHES DO TREINO (RESPONSIVO) ==========
 export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
   const [atletas, setAtletas] = useState([]);
   const [presencas, setPresencas] = useState([]);
   const [savingPresenca, setSavingPresenca] = useState(false);
-
-
 
   const carregarAtletas = async () => {
     try {
@@ -289,7 +288,7 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
 
       const q = query(
         collection(db, "presencas"),
-        where("treinoId", "==", treino.id),
+        where("treinoId", "==", treino.id)
       );
       const presSnap = await getDocs(q);
       const lista = presSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -300,69 +299,60 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
   };
 
   const marcarPresenca = async (atletaId, novoEstado) => {
-  setSavingPresenca(true);
+    setSavingPresenca(true);
 
-  try {
-    const existente = presencas.find(
-      (p) => p.atletaId === atletaId && p.treinoId === treino.id,
-    );
-    const agora = new Date();
-
-    if (novoEstado === null) {
-      if (existente) {
-        await deleteDoc(doc(db, "presencas", existente.id));
-        setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
-      }
-    } else if (existente) {
-      // ← AQUI A ALTERAÇÃO PRINCIPAL
-      const dadosUpdate = {
-        estado: novoEstado,
-        updatedAt: agora,
-      };
-
-      // Se for ATRASO, calcular minutos automaticamente
-      if (novoEstado === "atraso") {
-        const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
-        const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
-        dadosUpdate.atrasoMinutos = Math.max(0, atrasoMinutos);
-        dadosUpdate.nota = `Atraso de ${dadosUpdate.atrasoMinutos} min`;
-      }
-
-      await updateDoc(doc(db, "presencas", existente.id), dadosUpdate);
-      
-      setPresencas((prev) =>
-        prev.map((p) =>
-          p.id === existente.id ? { ...p, ...dadosUpdate } : p
-        )
+    try {
+      const existente = presencas.find(
+        (p) => p.atletaId === atletaId && p.treinoId === treino.id
       );
-    } else {
-      const dadosNovo = {
-        treinoId: treino.id,
-        atletaId,
-        estado: novoEstado,
-        createdAt: agora,
-        updatedAt: agora,
-      };
+      const agora = new Date();
 
-      // ATRASO no novo registo também
-      if (novoEstado === "atraso") {
-        const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
-        const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
-        dadosNovo.atrasoMinutos = Math.max(0, atrasoMinutos);
-        dadosNovo.nota = `Atraso de ${dadosNovo.atrasoMinutos} min`;
+      if (novoEstado === null) {
+        if (existente) {
+          await deleteDoc(doc(db, "presencas", existente.id));
+          setPresencas((prev) => prev.filter((p) => p.id !== existente.id));
+        }
+      } else if (existente) {
+        const dadosUpdate = {
+          estado: novoEstado,
+          updatedAt: agora,
+        };
+
+        if (novoEstado === "atraso") {
+          const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
+          const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
+          dadosUpdate.atrasoMinutos = Math.max(0, atrasoMinutos);
+          dadosUpdate.nota = `Atraso de ${dadosUpdate.atrasoMinutos} min`;
+        }
+
+        await updateDoc(doc(db, "presencas", existente.id), dadosUpdate);
+
+        setPresencas((prev) =>
+          prev.map((p) => (p.id === existente.id ? { ...p, ...dadosUpdate } : p))
+        );
+      } else {
+        const dadosNovo = {
+          treinoId: treino.id,
+          atletaId,
+          estado: novoEstado,
+          createdAt: agora,
+          updatedAt: agora,
+        };
+
+        if (novoEstado === "atraso") {
+          const inicioTreino = new Date(`${treino.data}T${treino.horaInicio}:00`);
+          const atrasoMinutos = Math.floor((agora - inicioTreino) / (1000 * 60));
+          dadosNovo.atrasoMinutos = Math.max(0, atrasoMinutos);
+          dadosNovo.nota = `Atraso de ${dadosNovo.atrasoMinutos} min`;
+        }
+
+        const ref = await addDoc(collection(db, "presencas"), dadosNovo);
+        setPresencas((prev) => [...prev, { id: ref.id, ...dadosNovo }]);
       }
-
-      const ref = await addDoc(collection(db, "presencas"), dadosNovo);
-      setPresencas((prev) => [
-        ...prev,
-        { id: ref.id, ...dadosNovo },
-      ]);
+    } finally {
+      setSavingPresenca(false);
     }
-  } finally {
-    setSavingPresenca(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     carregarAtletas();
@@ -370,7 +360,7 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50"
       onClick={onClose}
     >
       <div
@@ -378,20 +368,20 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 sticky top-0 bg-gradient-to-r from-[#0b1635] to-[#152452] text-white z-10 rounded-t-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-xl font-bold">{treino.equipa}</h2>
+        <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-gradient-to-r from-[#0b1635] to-[#152452] text-white z-10 rounded-t-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold truncate">{treino.equipa}</h2>
               <p className="text-sm text-slate-200 mt-1">
                 {treino.data} · {treino.horaInicio}–{treino.horaFim}
               </p>
               {treino.local && (
-                <p className="text-xs text-slate-300 mt-1">📍 {treino.local}</p>
+                <p className="text-xs text-slate-300 mt-1 truncate">📍 {treino.local}</p>
               )}
             </div>
             <button
               onClick={onEditarClick}
-              className="px-3 py-2 bg-[#f5c623] text-[#0b1635] rounded-lg text-xs font-semibold hover:bg-[#f5c623]/90 transition flex items-center gap-2"
+              className="w-full sm:w-auto px-3 py-2 bg-[#f5c623] text-[#0b1635] rounded-lg text-xs font-semibold hover:bg-[#f5c623]/90 transition flex items-center justify-center gap-2"
             >
               <Settings2 className="w-4 h-4" />
               Editar Detalhes
@@ -399,65 +389,65 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Detalhes do Treino */}
           {(treino.descricao ||
             treino.planoTreino ||
             treino.fundamento ||
             treino.objetivo) && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
-                  Detalhes do Treino
-                </h3>
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-700 border-b pb-2 flex items-center gap-2">
+                <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
+                Detalhes do Treino
+              </h3>
 
-                {treino.descricao && (
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-xs font-semibold text-slate-600 mb-1">
-                      Descrição
-                    </p>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                      {treino.descricao}
-                    </p>
-                  </div>
-                )}
+              {treino.descricao && (
+                <div className="p-3 sm:p-4 bg-slate-50 rounded-lg">
+                  <p className="text-xs font-semibold text-slate-600 mb-1">
+                    Descrição
+                  </p>
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                    {treino.descricao}
+                  </p>
+                </div>
+              )}
 
-                {treino.objetivo && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs font-semibold text-blue-700 mb-1">
-                      🎯 Objetivo
-                    </p>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                      {treino.objetivo}
-                    </p>
-                  </div>
-                )}
+              {treino.objetivo && (
+                <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs font-semibold text-blue-700 mb-1">
+                    🎯 Objetivo
+                  </p>
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                    {treino.objetivo}
+                  </p>
+                </div>
+              )}
 
-                {treino.fundamento && (
-                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <p className="text-xs font-semibold text-emerald-700 mb-1">
-                      🏐 Fundamento
-                    </p>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                      {treino.fundamento}
-                    </p>
-                  </div>
-                )}
+              {treino.fundamento && (
+                <div className="p-3 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <p className="text-xs font-semibold text-emerald-700 mb-1">
+                    🏐 Fundamento
+                  </p>
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                    {treino.fundamento}
+                  </p>
+                </div>
+              )}
 
-                {treino.planoTreino && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-xs font-semibold text-amber-700 mb-1">
-                      📋 Plano de Treino
-                    </p>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap">
-                      {treino.planoTreino}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+              {treino.planoTreino && (
+                <div className="p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs font-semibold text-amber-700 mb-1">
+                    📋 Plano de Treino
+                  </p>
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                    {treino.planoTreino}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Lista de Atletas */}
+          {/* Lista de Atletas - RESPONSIVO */}
           <div>
             <h3 className="text-sm font-semibold text-slate-700 mb-3 border-b pb-2 flex items-center gap-2">
               <div className="w-1 h-4 bg-[#f5c623] rounded"></div>
@@ -465,28 +455,29 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
             </h3>
 
             {atletas.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 text-center py-6">
                 Nenhum atleta neste escalão.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {atletas.map((atleta) => {
                   const presenca = presencas.find(
-                    (p) => p.atletaId === atleta.id && p.treinoId === treino.id,
+                    (p) => p.atletaId === atleta.id && p.treinoId === treino.id
                   );
                   const estado = presenca?.estado || null;
 
                   return (
                     <div
                       key={atleta.id}
-                      className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 transition"
+                      className="border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 transition p-3"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-800">
+                      {/* Info do atleta */}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-800 flex-shrink-0">
                           {atleta.nome?.charAt(0) || "?"}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">
                             {atleta.nome}
                           </p>
                           <p className="text-xs text-slate-500">
@@ -495,56 +486,67 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      {/* Botões de presença - GRID RESPONSIVO */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <button
                           type="button"
                           disabled={savingPresenca}
                           onClick={() => marcarPresenca(atleta.id, "presente")}
-                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "presente"
-                              ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                              : "bg-white text-slate-700 border-slate-200"
-                            }`}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                            estado === "presente"
+                              ? "bg-emerald-500 text-white border-emerald-600 shadow-md"
+                              : "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                          }`}
                         >
-                          Presente
+                          ✓ Presente
                         </button>
 
                         <button
                           type="button"
                           disabled={savingPresenca}
                           onClick={() => marcarPresenca(atleta.id, "atraso")}
-                          className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${estado === "atraso"
-                              ? "bg-orange-100 text-orange-700 border-orange-300"
-                              : "bg-white text-orange-700 border-slate-200 hover:bg-orange-50"
-                            }`}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                            estado === "atraso"
+                              ? "bg-orange-500 text-white border-orange-600 shadow-md"
+                              : "bg-white text-orange-700 border-orange-300 hover:bg-orange-50"
+                          }`}
                         >
-                          Atraso
+                          ⏱ Atraso
                         </button>
 
                         <button
                           type="button"
                           disabled={savingPresenca}
                           onClick={() => marcarPresenca(atleta.id, "falta")}
-                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "falta"
-                              ? "bg-red-100 text-red-700 border-red-300"
-                              : "bg-white text-slate-700 border-slate-200"
-                            }`}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                            estado === "falta"
+                              ? "bg-red-500 text-white border-red-600 shadow-md"
+                              : "bg-white text-red-700 border-red-300 hover:bg-red-50"
+                          }`}
                         >
-                          Falta
+                          ✗ Falta
                         </button>
+
                         <button
                           type="button"
                           disabled={savingPresenca}
-                          onClick={() =>
-                            marcarPresenca(atleta.id, "justificada")
-                          }
-                          className={`px-2 py-1 rounded text-xs font-medium border ${estado === "justificada"
-                              ? "bg-amber-100 text-amber-700 border-amber-300"
-                              : "bg-white text-slate-700 border-slate-200"
-                            }`}
+                          onClick={() => marcarPresenca(atleta.id, "justificada")}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                            estado === "justificada"
+                              ? "bg-amber-500 text-white border-amber-600 shadow-md"
+                              : "bg-white text-amber-700 border-amber-300 hover:bg-amber-50"
+                          }`}
                         >
-                          Justificada
+                          ℹ Justif.
                         </button>
                       </div>
+
+                      {/* Mostra nota de atraso se existir */}
+                      {estado === "atraso" && presenca?.nota && (
+                        <p className="text-xs text-orange-700 mt-2 bg-orange-50 px-2 py-1 rounded">
+                          {presenca.nota}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -566,7 +568,7 @@ export const ModalDetalhes = ({ treino, onClose, onEditarClick }) => {
   );
 };
 
-// ========== MODAL EDITAR TREINO ==========
+// ========== MODAL EDITAR TREINO (RESPONSIVO) ==========
 export const ModalEditarTreino = ({ treino, onClose, onSave }) => {
   const [formTreino, setFormTreino] = useState({
     descricao: treino.descricao || "",
@@ -592,7 +594,7 @@ export const ModalEditarTreino = ({ treino, onClose, onSave }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60]"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-[60]"
       onClick={onClose}
     >
       <div
@@ -600,25 +602,27 @@ export const ModalEditarTreino = ({ treino, onClose, onSave }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+        <div className="p-4 sm:p-6 border-b border-slate-200 sticky top-0 bg-white z-10 rounded-t-2xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">
-              Editar Detalhes do Treino
-            </h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                Editar Detalhes do Treino
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 truncate">
+                {treino.equipa} · {treino.data}
+              </p>
+            </div>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-slate-400 hover:text-slate-600 ml-2"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            {treino.equipa} · {treino.data}
-          </p>
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Descrição do Treino
@@ -685,17 +689,17 @@ export const ModalEditarTreino = ({ treino, onClose, onSave }) => {
           </div>
 
           {/* Botões */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+              className="w-full sm:flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-[#0b1635] text-white rounded-lg font-medium hover:bg-[#152452] transition flex items-center justify-center gap-2"
+              className="w-full sm:flex-1 px-4 py-2 bg-[#0b1635] text-white rounded-lg font-medium hover:bg-[#152452] transition flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
               Guardar Detalhes

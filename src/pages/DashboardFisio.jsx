@@ -28,7 +28,7 @@ export default function DashboardFisio({ user }) {
     year: 'numeric',
   });
 
-  const primeiroNome = user?.displayName?.split(' ')[0] || 'Fisio';
+  const primeiroNome = user?.displayName?.split(' ')[0] || user?.nome ||  'Fisio';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
