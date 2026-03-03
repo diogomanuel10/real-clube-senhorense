@@ -133,7 +133,7 @@ export default function AcademicTab({ athleteId }) {
     });
   }
 
-  console.log(record);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);

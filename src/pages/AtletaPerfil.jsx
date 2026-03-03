@@ -21,7 +21,7 @@ import DashboardLayout from "../components/DashboardLayout";
 const positions = ["Central", "Ponta", "Distribuidora", "Líbero", "Oposta"];
 
 export default function AtletaPerfil({ user }) {
-  console.log("USER", user);
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const tabs = [

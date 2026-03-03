@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Check, Phone, Mail, AlertCircle, Clock, Trash2 } from 'lucide-react';
 import { useAlertasActions } from '../../../hooks/useAlertasActions';
 
-export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboard }) {
+export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboard, onRemoverItem }) { // 👈 ADICIONA onRemoverItem
   const [processando, setProcessando] = useState(false);
   const [itemSelecionado, setItemSelecionado] = useState(null);
   
@@ -49,9 +49,14 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
           break;
       }
 
-      if (sucesso && alerta.dados.length <= 1) {
+      // 👇 NOVO: Remove item localmente se sucesso
+      if (sucesso) {
+        onRemoverItem?.(item.id); // Remove do array local
+        
         // Se era o último item, fecha o modal
-        onClose();
+        if (alerta.dados.length <= 1) {
+          onClose();
+        }
       }
     } finally {
       setProcessando(false);
@@ -73,12 +78,6 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
           label: 'Enviar lembrete',
           icon: Mail,
           cor: 'blue',
-        },
-        {
-          id: 'dispensar',
-          label: 'Dispensar 7 dias',
-          icon: Clock,
-          cor: 'gray',
         },
       ];
     }
@@ -107,12 +106,6 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
           label: 'Marcar como contactado',
           icon: Phone,
           cor: 'blue',
-        },
-        {
-          id: 'dispensar',
-          label: 'Dispensar 7 dias',
-          icon: Clock,
-          cor: 'gray',
         },
       ];
     }

@@ -14,6 +14,8 @@ export function useDashboardAdmin() {
     treinosSemana: 0,
   });
 
+
+
   const [quotas, setQuotas] = useState({
     pagas: [],
     pendentes: [],
@@ -23,7 +25,7 @@ export function useDashboardAdmin() {
   const [escaloes, setEscaloes] = useState([]);
   const [treinadores, setTreinadores] = useState([]);
   const [atividadeRecente, setAtividadeRecente] = useState([]);
-  
+
   // NOVO: Estados para alertas
   const [alertas, setAlertas] = useState({
     criticos: [],
@@ -54,6 +56,11 @@ export function useDashboardAdmin() {
       const hoje = new Date();
       const hojeISO = hoje.toISOString().slice(0, 10);
 
+      const estaDispensado = (item) => {
+        if (!item.alertaDispensadoAte) return false;
+        return item.alertaDispensadoAte >= hojeISO;
+      };
+
       // 1. Carregar Atletas
       const atletasSnap = await getDocs(collection(db, 'atletas'));
       const todosAtletas = atletasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -73,8 +80,8 @@ export function useDashboardAdmin() {
 
       const treinosSnap = await getDocs(collection(db, 'treinos'));
       const todosTreinos = treinosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      const treinosSemana = todosTreinos.filter(t => 
+
+      const treinosSemana = todosTreinos.filter(t =>
         t.data >= inicioSemanaISO && t.data <= hojeISO
       );
 
@@ -113,19 +120,19 @@ export function useDashboardAdmin() {
       const quotasCriticas = quotasEmAtraso.filter(q => {
         const vencimento = new Date(q.dataVencimento);
         const diasAtraso = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
-        return diasAtraso >= 30;
+        return diasAtraso >= 30 && !estaDispensado(q);
       });
 
       const quotasModeradas = quotasEmAtraso.filter(q => {
         const vencimento = new Date(q.dataVencimento);
         const diasAtraso = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
-        return diasAtraso >= 8 && diasAtraso < 30;
+        return diasAtraso >= 8 && diasAtraso < 30 && !estaDispensado(q);
       });
 
       const quotasLeves = quotasEmAtraso.filter(q => {
         const vencimento = new Date(q.dataVencimento);
         const diasAtraso = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
-        return diasAtraso > 0 && diasAtraso < 8;
+        return diasAtraso > 0 && diasAtraso < 8 && !estaDispensado(q);
       });
 
       // NOVO: Pré-alerta de vencimento (próximos 5 dias)
@@ -134,8 +141,8 @@ export function useDashboardAdmin() {
       const daqui5DiasISO = daqui5Dias.toISOString().slice(0, 10);
 
       const quotasVencendoEmBreve = quotasPendentes.filter(q =>
-        q.dataVencimento && 
-        q.dataVencimento >= hojeISO && 
+        q.dataVencimento &&
+        q.dataVencimento >= hojeISO &&
         q.dataVencimento <= daqui5DiasISO
       );
 
@@ -145,7 +152,7 @@ export function useDashboardAdmin() {
           if (!q.updatedAt) return false;
           const pagamento = q.updatedAt.toDate();
           return pagamento.getMonth() === hoje.getMonth() &&
-                 pagamento.getFullYear() === hoje.getFullYear();
+            pagamento.getFullYear() === hoje.getFullYear();
         })
         .reduce((acc, q) => acc + (q.valor || 0), 0);
 
@@ -178,35 +185,47 @@ export function useDashboardAdmin() {
       });
 
       // 7. NOVO: Atletas com assiduidade baixa (só faltas injustificadas)
-      const atletasAssiduidadeBaixa = todosAtletas.map(atleta => {
-        const treinosAtleta = treinos30Dias.filter(t => t.equipa === atleta.equipa);
-        const presencasAtleta = todasPresencas.filter(p => 
-          p.atletaId === atleta.id && 
-          treinosIds30Dias.includes(p.treinoId)
-        );
+    const atletasAssiduidadeBaixa = todosAtletas.map(atleta => {
+  const treinosAtleta = treinos30Dias.filter(t => t.equipa === atleta.equipa);
+  const presencasAtleta = todasPresencas.filter(p => 
+    p.atletaId === atleta.id && 
+    treinosIds30Dias.includes(p.treinoId)
+  );
 
-        const presentes = presencasAtleta.filter(p => p.estado === 'presente').length;
-        const totalTreinos = treinosAtleta.length;
+  const presentes = presencasAtleta.filter(p => p.estado === 'presente').length;
+  const totalTreinos = treinosAtleta.length;
 
-        const taxaPresenca = totalTreinos > 0 
-          ? (presentes / totalTreinos) * 100 
-          : 100;
+  const taxaPresenca = totalTreinos > 0 
+    ? (presentes / totalTreinos) * 100 
+    : 100;
 
-        const faltasInjustificadas = presencasAtleta.filter(p => p.estado === 'falta').length;
+  const faltasInjustificadas = presencasAtleta.filter(p => p.estado === 'falta').length;
 
-        return {
-          ...atleta,
-          taxaPresenca: Math.round(taxaPresenca),
-          faltasInjustificadas,
-          totalTreinos,
-        };
-      }).filter(a => a.taxaPresenca < 60 && a.totalTreinos > 0);
+  // 👇 NOVO: Verifica se foi contactado recentemente
+  const ultimoContacto = atleta.ultimoContacto ? new Date(atleta.ultimoContacto) : null;
+  const diasDesdeContacto = ultimoContacto 
+    ? Math.floor((hoje - ultimoContacto) / (1000 * 60 * 60 * 24))
+    : 999;
+
+  return {
+    ...atleta,
+    taxaPresenca: Math.round(taxaPresenca),
+    faltasInjustificadas,
+    totalTreinos,
+    diasDesdeContacto,
+  };
+}).filter(a => 
+  a.taxaPresenca < 60 && 
+  a.totalTreinos > 0 && 
+  a.diasDesdeContacto > 7 && // 👈 Exclui se foi contactado há menos de 7 dias
+  !estaDispensado(a) // 👈 Exclui se foi dispensado
+);
 
       // 8. NOVO: Carregar Captações
       const captacoesSnap = await getDocs(collection(db, 'captacoes'));
       const todasCaptacoes = captacoesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const captacoesPendentes = todasCaptacoes.filter(c => 
+      const captacoesPendentes = todasCaptacoes.filter(c =>
         c.aprovadoDirecao === "pendente"
       );
 
@@ -217,7 +236,7 @@ export function useDashboardAdmin() {
         return diasEspera >= 10;
       });
 
-      const captacoesAprovadas = todasCaptacoes.filter(c => 
+      const captacoesAprovadas = todasCaptacoes.filter(c =>
         c.aprovadoDirecao === "aprovado"
       );
 
@@ -440,6 +459,8 @@ export function useDashboardAdmin() {
           equipas: equipas.join(', ') || 'Sem equipas',
         };
       });
+
+
 
       setTreinadores(treinadoresComStats);
 
