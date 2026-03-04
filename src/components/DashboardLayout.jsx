@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone, Dumbbell, Trophy } from "lucide-react";
 import { FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
-import { enableNotificationsForUser } from "../utils/notifications";
 import { auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
 const navItems = [
@@ -41,12 +40,7 @@ export default function DashboardLayout({ children, user }) {
   // Determinar role do user (adapta conforme a tua estrutura no Firebase)
   const userRole = user?.role || user?.customClaims?.role || "viewer";
 
-  useEffect(() => {
-    if (user?.uid) {
-      // podes mostrar um botão "Ativar notificações" e chamar isto ao clicar
-      enableNotificationsForUser(user.uid);
-    }
-  }, [user?.uid]);
+ 
 
   const handleLogout = async () => {
     try {

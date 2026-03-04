@@ -19,6 +19,23 @@
       ],
       "density": "SPARSE_ALL"
     },
+     {
+      "collectionGroup": "treinos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "equipa", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" },
+        { "fieldPath": "horaInicio", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "avaliacoes_treino", 
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "equipa", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
     {
       "collectionGroup": "presencas",
       "queryScope": "COLLECTION",

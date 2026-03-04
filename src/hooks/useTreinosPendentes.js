@@ -5,15 +5,13 @@ import {
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 
-export const useTreinosPendentes = (equipaId) => {
-    const [refreshKey, setRefreshKey] = useState(0);
-    
+export const useTreinosPendentes = (equipas) => {
     const [treinosPendentes, setTreinosPendentes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const fetchTreinos = useCallback(async () => {
-        if (!equipaId) {
+        if (!equipas || equipas.length === 0) {
             setTreinosPendentes([]);
             setLoading(false);
             return;
@@ -23,51 +21,50 @@ export const useTreinosPendentes = (equipaId) => {
         setError(null);
 
         try {
-           
+            // para já, faz 1 query por equipa em paralelo
+            const dataInicio = new Date('2026-01-02');
 
-            // Data início: 02/03/2026
-            const dataInicio = new Date('2026-01-02')
-
-            // QUERY 1: Todos os treinos desde 02/03
-            const treinosQ = query(
-                collection(db, 'treinos'),
-                where('equipa', '==', equipaId),
-                where('data','>','2026-03-01'),
-                orderBy('data', 'desc'),
-                orderBy('horaInicio', 'asc')
+            const treinosQueries = equipas.map(eq =>
+                query(
+                    collection(db, 'treinos'),
+                    where('equipa', '==', eq),
+                    where('data', '>', '2026-03-01'),
+                    orderBy('data', 'desc'),
+                    orderBy('horaInicio', 'asc')
+                )
             );
 
-            // QUERY 2: Todas as avaliações da equipa
-            const avaliacoesQ = query(
-                collection(db, 'avaliacoes_treino'),
-                where('equipa', '==', equipaId)
+            const avaliacoesQueries = equipas.map(eq =>
+                query(
+                    collection(db, 'avaliacoes_treino'),
+                    where('equipa', '==', eq)
+                )
             );
 
-            const [treinosSnap, avaliacoesSnap] = await Promise.all([
-                getDocs(treinosQ),
-                getDocs(avaliacoesQ)
+            const [treinosSnaps, avaliacoesSnaps] = await Promise.all([
+                Promise.all(treinosQueries.map(getDocs)),
+                Promise.all(avaliacoesQueries.map(getDocs)),
             ]);
 
-          
-
-            // Conjunto de IDs já avaliados
             const idsAvaliados = new Set(
-                avaliacoesSnap.docs.map(doc => doc.data().treinoId)
+                avaliacoesSnaps.flatMap(snap =>
+                    snap.docs.map(doc => doc.data().treinoId)
+                )
             );
 
-            // Converter treinos + filtrar passados SEM avaliação
             const agora = new Date();
-            const pendentes = treinosSnap.docs
+
+            const pendentes = treinosSnaps
+                .flatMap(snap => snap.docs)
                 .map(doc => {
                     const dataRaw = doc.data();
                     return {
                         id: doc.id,
                         ...dataRaw,
-                        data: dataRaw.data.toDate ? dataRaw.data.toDate() : new Date(dataRaw.data)  // ✅ FUNCIONA!
+                        data: dataRaw.data.toDate ? dataRaw.data.toDate() : new Date(dataRaw.data),
                     };
                 })
                 .filter(treino => {
-                    // Calcular fim do treino
                     const horaFim = treino.horaFim || treino.horaInicio;
                     if (!horaFim) return false;
 
@@ -75,18 +72,20 @@ export const useTreinosPendentes = (equipaId) => {
                     const fimTreino = new Date(treino.data);
                     fimTreino.setHours(hFim, mFim, 0, 0);
 
-                    // Passou? + Sem avaliação?
                     const passou = agora > fimTreino;
                     const semAvaliacao = !idsAvaliados.has(treino.id);
 
-                
-
                     return passou && semAvaliacao;
+                })
+                .sort((a, b) => {
+                    // ordena por data desc + horaInicio asc como antes
+                    if (a.data.getTime() !== b.data.getTime()) {
+                        return b.data - a.data;
+                    }
+                    return (a.horaInicio || '').localeCompare(b.horaInicio || '');
                 });
 
             setTreinosPendentes(pendentes);
-            
-
         } catch (error) {
             console.error('❌ ERRO useTreinosPendentes:', error);
             setError(error.message);
@@ -94,16 +93,12 @@ export const useTreinosPendentes = (equipaId) => {
         } finally {
             setLoading(false);
         }
-    }, [equipaId]);
+    }, [equipas]);
 
     useEffect(() => {
         fetchTreinos();
     }, [fetchTreinos]);
 
-    return {
-        treinosPendentes,
-        loading,
-        error,
-        refetch: fetchTreinos
-    };
+    return { treinosPendentes, loading, error, refetch: fetchTreinos };
 };
+

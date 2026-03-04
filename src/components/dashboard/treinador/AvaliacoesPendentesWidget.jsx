@@ -10,19 +10,19 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
     const [formData, setFormData] = useState({
         positivos: '', negativos: '', estrelas: 3, top5: []
     });
+
+    const equipasIds = permissions?.equipas || [];        // ["Sub 21 F", "Seniores F"]
+    const [pagina, setPagina] = useState(1);
+    const porPagina = 3;
+
+    const { treinosPendentes, loading, refetch } = useTreinosPendentes(equipasIds);
+    const { atletas: atletasEquipa, loading: loadingAtletas } = useAtletasEquipa(equipasIds);
+
+
     const equipaId = permissions?.equipas?.[0] || null;
-    const { atletas: atletasEquipa, loading: loadingAtletas } = useAtletasEquipa(equipaId);
     const [avaliando, setAvaliando] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
-    const { treinosPendentes, loading, refetch } = useTreinosPendentes(equipaId);
-
-
-    // ✅ Garante que `equipaId` é string ou null, nunca undefined
-
- 
-
-    // Se loading for true, só mostra loading
     if (loading) {
         return (
             <div className="bg-white rounded-xl p-6 text-center text-slate-500">
@@ -40,8 +40,10 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
         );
     }
 
-    // Se chegar aqui, o componente já tem todos os hooks chamados
-    const pendentes = treinosPendentes;
+    const pendentes = treinosPendentes || [];
+    const totalPaginas = Math.ceil(pendentes.length / porPagina);
+    const inicio = (pagina - 1) * porPagina;
+    const pendentesPagina = pendentes.slice(inicio, inicio + porPagina);
 
     const handleAbrirModal = (treino) => {
         setFormData({ positivos: '', negativos: '', estrelas: 3, top5: [] });
@@ -81,7 +83,7 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
             await addDoc(collection(db, 'avaliacoes_treino'), {
                 treinoId: treinoAvaliando.id,
                 treinadorId: user.uid,
-                equipa: permissions.equipas[0],
+                equipa: treinoAvaliando.equipa,
                 data: treinoAvaliando.data,
                 positivos: formData.positivos,
                 negativos: formData.negativos || '',
@@ -89,7 +91,7 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
                 top5: formData.top5.map(a => a.id),
                 createdAt: serverTimestamp()
             });
-           
+
             refetch();
             setTreinoAvaliando(null);
         } catch (error) {
@@ -99,11 +101,15 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
         }
     };
 
+    console.log(treinoAvaliando)
     if (pendentes.length === 0) return null;
 
     if (loadingAtletas) {
         return <p className="text-sm text-slate-500">A carregar atletas...</p>;
     }
+
+    const equipaTreinoAtual = treinoAvaliando?.equipa;
+
     return (
         <>
             {/* Widget principal */}
@@ -124,7 +130,8 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
                 {/* Cards dos treinos - Grid responsivo */}
                 {/* Cards com DATA BONITA */}
                 <div className="space-y-2 sm:space-y-3">
-                    {pendentes.slice(0, 3).map((treino) => {
+                    {pendentesPagina.map((treino) => {
+
                         const dataFormatada = formatarDataTreino(treino.data);
 
                         return (
@@ -155,7 +162,7 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
                                             <Clock className="w-4 h-4 text-slate-500" />
                                             <span className="font-medium text-slate-900">{treino.horaInicio} - {treino.horaFim}</span>
                                         </div>
-                                        <span className="truncate">{treino.local}</span>
+                                        <span className="truncate">{treino.equipa} - {treino.local}</span>
                                     </div>
 
                                     {/* Call to action */}
@@ -170,6 +177,27 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
                             </button>
                         );
                     })}
+
+                    {totalPaginas > 1 && (
+                        <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
+                            <button
+                                onClick={() => setPagina(p => Math.max(1, p - 1))}
+                                disabled={pagina === 1}
+                                className="px-3 py-1 rounded-xl border border-slate-300 disabled:opacity-40"
+                            >
+                                Anterior
+                            </button>
+                            <span>Página {pagina} de {totalPaginas}</span>
+                            <button
+                                onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                                disabled={pagina === totalPaginas}
+                                className="px-3 py-1 rounded-xl border border-slate-300 disabled:opacity-40"
+                            >
+                                Seguinte
+                            </button>
+                        </div>
+                    )}
+
                 </div>
 
 
@@ -333,13 +361,14 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
 
                                     {/* ✅ 3. GRID 2 COLUNAS (sem scroll!) */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
                                         {atletasEquipa
                                             .filter(atleta =>
                                                 !formData.pesquisa ||
                                                 atleta.nome.toLowerCase().includes(formData.pesquisa.toLowerCase())
                                             )
                                             .filter(atleta => !formData.top5.some(s => s.id === atleta.id))
-                                            .slice(0, 10)  // Mostra top 10 (5 por coluna)
+                                            .slice(0, 10)
                                             .map((atleta) => (
                                                 <button
                                                     key={atleta.id}
