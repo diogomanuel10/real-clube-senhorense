@@ -25,6 +25,7 @@ import AtletaPerfil from "./pages/AtletaPerfil";
 import Quotas from "./pages/Quotas";
 import Exercicios from "./pages/ExerciciosSebenta"
 import AdminUsers from "./pages/AdminUsers";
+import Avaliacoes from "./pages/AvaliacoesEquipa"
 import Comunicados from "./pages/Comunicados";
 import FirebaseMonitoring from './pages/FirebaseMonitoring';
 import Equipamentos from "./pages/Equipamentos";
@@ -45,6 +46,15 @@ function AppContent({ user }) {
             element={
               <DashboardLayout user={user}>
                 <Atletas user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/avaliacoes"
+            element={
+              <DashboardLayout user={user}>
+                <Avaliacoes user={user} />
               </DashboardLayout>
             }
           />

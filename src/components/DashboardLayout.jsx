@@ -19,6 +19,7 @@ const navItems = [
   { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador", "coordenador", "fisio"] },
   { id: "jogos", label: "Jogos", icon: Trophy, path: "/jogos", roles: ["admin", "treinador", "coordenador"] },
   { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador", "coordenador"] },
+  { id: "avaliacoes", label: "Avaliações", icon: BarChart3, path: "/avaliacoes", roles: ["treinador", "admin", "coordenador"] },
 
   { id: "sebenta", label: "Sebenta Exercícios", icon: Dumbbell, path: "/exercicios", roles: ["treinador", "admin", "coordenador", "fisio"] },
 

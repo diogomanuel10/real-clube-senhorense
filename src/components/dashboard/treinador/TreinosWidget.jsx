@@ -8,6 +8,7 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
   const [treinoSelecionado, setTreinoSelecionado] = useState(null);
   const [showModalPlano, setShowModalPlano] = useState(false);
   const [showModalPresencas, setShowModalPresencas] = useState(false);
+  const [showProximos, setShowProximos] = useState(false); // 👈 controla se mostra próximos treinos
 
   const formatarData = (dataISO) => {
     const data = new Date(dataISO + 'T00:00:00');
@@ -32,7 +33,6 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
   };
 
   const handleSavePlano = (novosDados) => {
-    // Atualizar o treino localmente após guardar
     console.log('Plano atualizado:', novosDados);
   };
 
@@ -60,7 +60,7 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
               <div>
                 <h3 className="text-base font-bold text-slate-900">Treinos</h3>
                 <p className="text-xs text-slate-500">
-                  {treinosHoje.length} hoje · {proximosTreinos.length} próximos
+                  {treinosHoje.length} hoje
                 </p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
                         Hoje
                       </span>
                     </div>
-                    
+
                     <div className="space-y-2 text-sm text-slate-600 mb-4">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 flex-shrink-0" />
@@ -112,16 +112,16 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
                       </div>
                     </div>
 
-                    {/* 2 BOTÕES SEPARADOS */}
+                    {/* Botões Plano e Presenças */}
                     <div className="grid grid-cols-2 gap-2">
-                      <button 
+                      <button
                         onClick={() => abrirModalPlano(treino)}
                         className="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-[#0b1635] font-medium hover:bg-slate-50 hover:border-slate-400 transition-colors flex items-center justify-center gap-1.5"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         Plano
                       </button>
-                      <button 
+                      <button
                         onClick={() => abrirModalPresencas(treino)}
                         className="px-3 py-2 bg-[#0b1635] text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
                       >
@@ -141,8 +141,23 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
             </div>
           )}
 
-          {/* Próximos Treinos */}
+          {/* Botão para mostrar próximos treinos */}
           {proximosTreinos.length > 0 && (
+            <div className="mb-4">
+              <button
+                onClick={() => setShowProximos(prev => !prev)}
+                className="text-sm text-slate-900 hover:text-slate-700 font-medium flex items-center gap-1"
+              >
+                {showProximos ? 'Ocultar próximos treinos' : `Mostrar próximos treinos (${proximosTreinos.length})`}
+                <ChevronRight
+                  className={`w-4 h-4 transition-transform ${showProximos ? 'rotate-90' : ''}`}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Secção "Próximos Treinos" (aparece só quando showProximos === true) */}
+          {showProximos && proximosTreinos.length > 0 && (
             <div>
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
                 PRÓXIMOS TREINOS
@@ -181,7 +196,7 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
         </div>
       </div>
 
-      {/* Modal: Ver/Editar Plano do Treino */}
+      {/* Modais */}
       {showModalPlano && treinoSelecionado && (
         <ModalEditarTreino
           treino={treinoSelecionado}
@@ -190,7 +205,6 @@ export default function TreinosWidget({ treinosHoje, proximosTreinos, loading })
         />
       )}
 
-      {/* Modal: Marcar Presenças */}
       {showModalPresencas && treinoSelecionado && (
         <ModalDetalhes
           treino={treinoSelecionado}

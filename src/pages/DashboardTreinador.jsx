@@ -8,6 +8,7 @@ import CalendarioSemanalWidget from '../components/dashboard/treinador/Calendari
 import LesoesWidget from '../components/dashboard/treinador/LesoesWidget'; // 👈 NOVO
 import UltimoJogoWidget from '../components/dashboard/treinador/UltimoJogoWidget'; // 👈 NOVO
 import ComunicadosWidgetTreinador from '../components/dashboard/treinador/ComunicadosWidgetTreinador';
+import AvaliacoesPendentesWidget from '../components/dashboard/treinador/AvaliacoesPendentesWidget';
 import { RefreshCw, Users, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
@@ -123,12 +124,20 @@ export default function DashboardTreinador({ user }) {
                 proximosTreinos={proximosTreinos}
                 loading={loading}
               />
+
+              <AvaliacoesPendentesWidget
+                treinosHoje={treinosHoje}
+                user={user}
+                permissions={permissions}
+                recarregar={recarregar}
+              />
+
             </div>
 
             {/* 👇 NOVO - Último Jogo */}
             <UltimoJogoWidget equipas={permissions.equipas} />
 
-           
+
 
           </div>
 
@@ -144,7 +153,7 @@ export default function DashboardTreinador({ user }) {
 
             <LesoesWidget equipas={permissions.equipas} />
 
-         <ComunicadosWidgetTreinador
+            <ComunicadosWidgetTreinador
               comunicados={comunicados}
               loading={loading}
             />
