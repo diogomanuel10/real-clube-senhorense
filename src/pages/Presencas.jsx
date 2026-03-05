@@ -43,6 +43,14 @@ export default function Presencas({ user }) {
     new Date().getMonth(),
   );
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [escalaoSelecionado, currentYear, currentMonth]);
+
+
   useEffect(() => {
     if (!permissions.loading) {
       carregarEscaloes();
@@ -156,39 +164,51 @@ export default function Presencas({ user }) {
     setCurrentYear(novoAno);
   };
 
+  // ✅ FUNÇÃO CORRIGIDA - SUBSTITUI A VELHA
+  const calcularEstatisticasAtrasos = (atletaId) => {
+    const presencasDoAtleta = presencas.filter((p) => p.atletaId === atletaId);
+
+    const atrasos = presencasDoAtleta.filter((p) => p.estado === "atraso").length;
+
+    // ✅ USA atrasoMinutos (da tua estrutura)
+    const minutosAtraso = presencasDoAtleta
+      .filter((p) => p.estado === "atraso" && p.atrasoMinutos > 0)
+      .reduce((total, p) => total + (p.atrasoMinutos || 0), 0);
+
+    const mediaMinutosAtraso = atrasos > 0 ? Math.round(minutosAtraso / atrasos) : 0;
+
+    return { atrasos, mediaMinutosAtraso };
+  };
+
+  // ✅ FUNÇÃO calcularEstatisticas ATUALIZADA
   const calcularEstatisticas = (atletaId) => {
     const treinosDoAtleta = treinos.length;
-    const presencasDoAtleta = presencas.filter(
-      (p) => p.atletaId === atletaId,
-    );
+    const presencasDoAtleta = presencas.filter((p) => p.atletaId === atletaId);
 
-    const presentes = presencasDoAtleta.filter(
-      (p) => p.estado === "presente",
-    ).length;
-    const faltas = presencasDoAtleta.filter(
-      (p) => p.estado === "falta",
-    ).length;
-    const justificadas = presencasDoAtleta.filter(
-      (p) => p.estado === "justificada",
-    ).length;
+    const presentes = presencasDoAtleta.filter((p) => p.estado === "presente").length;
+    const faltas = presencasDoAtleta.filter((p) => p.estado === "falta").length;
+    const justificadas = presencasDoAtleta.filter((p) => p.estado === "justificada").length;
+    const { atrasos, mediaMinutosAtraso } = calcularEstatisticasAtrasos(atletaId);
 
-    const percentagem =
-      treinosDoAtleta > 0
-        ? Math.round((presentes / treinosDoAtleta) * 100)
-        : 0;
+    const percentagem = treinosDoAtleta > 0
+      ? Math.round((presentes / treinosDoAtleta) * 100)
+      : 0;
 
     return {
-      presentes,
-      faltas,
-      justificadas,
-      percentagem,
-      total: treinosDoAtleta,
+      presentes, faltas, justificadas, atrasos, mediaMinutosAtraso, percentagem, total: treinosDoAtleta,
     };
   };
 
+
   const calcularEstatisticasGerais = () => {
     if (atletas.length === 0 || treinos.length === 0) {
-      return { mediaPresenca: 0, melhorAtleta: null, piorAtleta: null };
+      return {
+        mediaPresenca: 0,
+        mediaAtrasos: 0,
+        mediaMinutosAtraso: 0,
+        melhorAtleta: null,
+        piorAtleta: null
+      };
     }
 
     const estatisticas = atletas.map((atleta) => ({
@@ -198,13 +218,18 @@ export default function Presencas({ user }) {
 
     const mediaPresenca = Math.round(
       estatisticas.reduce((acc, a) => acc + a.stats.percentagem, 0) /
-        estatisticas.length,
+      estatisticas.length,
     );
+
+    // Estatísticas de atrasos gerais
+    const totalAtrasos = estatisticas.reduce((acc, a) => acc + a.stats.atrasos, 0);
+    const totalMinutosAtraso = estatisticas.reduce((acc, a) => acc + (a.stats.mediaMinutosAtraso * a.stats.atrasos), 0);
+    const mediaAtrasos = Math.round((totalAtrasos / estatisticas.length) * 10) / 10;
+    const mediaMinutosAtrasoGeral = totalAtrasos > 0 ? Math.round(totalMinutosAtraso / totalAtrasos) : 0;
 
     const melhorAtleta = estatisticas.reduce(
       (best, current) =>
-        current.stats.percentagem >
-        (best?.stats.percentagem || 0)
+        current.stats.percentagem > (best?.stats.percentagem || 0)
           ? current
           : best,
       null,
@@ -212,14 +237,19 @@ export default function Presencas({ user }) {
 
     const piorAtleta = estatisticas.reduce(
       (worst, current) =>
-        current.stats.percentagem <
-        (worst?.stats.percentagem || 100)
+        current.stats.percentagem < (worst?.stats.percentagem || 100)
           ? current
           : worst,
       null,
     );
 
-    return { mediaPresenca, melhorAtleta, piorAtleta };
+    return {
+      mediaPresenca,
+      mediaAtrasos,
+      mediaMinutosAtraso: mediaMinutosAtrasoGeral,
+      melhorAtleta,
+      piorAtleta
+    };
   };
 
   const estatisticasGerais = calcularEstatisticasGerais();
@@ -230,12 +260,19 @@ export default function Presencas({ user }) {
     return "text-red-700 bg-red-100";
   };
 
-  const atletasOrdenados = atletas
-    .map((atleta) => ({
-      ...atleta,
-      stats: calcularEstatisticas(atleta.id),
-    }))
+  const estatisticasPorAtleta = atletas.map((atleta) => ({
+    ...atleta,
+    stats: calcularEstatisticas(atleta.id),
+  }));
+
+  const atletasOrdenadosComStats = estatisticasPorAtleta
     .sort((a, b) => b.stats.percentagem - a.stats.percentagem);
+
+  // ✅ PAGINAÇÃO AQUI
+  const totalPages = Math.ceil(atletasOrdenadosComStats.length / itemsPerPage);
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentAtletas = atletasOrdenadosComStats.slice(indexOfFirst, indexOfLast);
 
   if (permissions.loading) {
     return (
@@ -431,6 +468,7 @@ export default function Presencas({ user }) {
             ) : (
               <>
                 {/* Tabela desktop */}
+                {/* Tabela desktop */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-slate-100">
@@ -451,25 +489,23 @@ export default function Presencas({ user }) {
                           Justificadas
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Atrasos
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">
                           Total Treinos
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {atletasOrdenados.map((atleta, index) => (
-                        <tr
-                          key={atleta.id}
-                          className="hover:bg-slate-50 transition"
-                        >
+                      {currentAtletas.map((atleta, index) => (
+                        <tr key={atleta.id} className="hover:bg-slate-50 transition">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-[#0b1635] flex items-center justify-center text-white font-semibold text-sm">
                                 {atleta.nome?.charAt(0) || "?"}
                               </div>
                               <div>
-                                <p className="font-semibold text-slate-900">
-                                  {atleta.nome}
-                                </p>
+                                <p className="font-semibold text-slate-900">{atleta.nome}</p>
                                 <p className="text-xs text-slate-500">
                                   {atleta.posicao || "Sem posição"}
                                 </p>
@@ -485,10 +521,9 @@ export default function Presencas({ user }) {
                               >
                                 {atleta.stats.percentagem}%
                               </span>
-                              {index === 0 &&
-                                atleta.stats.percentagem >= 80 && (
-                                  <Award className="w-4 h-4 text-emerald-600" />
-                                )}
+                              {index === 0 && atleta.stats.percentagem >= 80 && (
+                                <Award className="w-4 h-4 text-emerald-600" />
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4 text-center">
@@ -507,6 +542,22 @@ export default function Presencas({ user }) {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
+                            {atleta.stats.atrasos > 0 ? (
+                              <div className="space-y-1">
+                                <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 text-purple-700 font-semibold text-sm">
+                                  {atleta.stats.atrasos}
+                                </span>
+                                <span className="text-xs text-purple-600 font-medium block">
+                                  {atleta.stats.mediaMinutosAtraso}' média
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-semibold text-sm">
+                                0
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-center">
                             <span className="text-sm font-medium text-slate-700">
                               {atleta.stats.total}
                             </span>
@@ -517,13 +568,11 @@ export default function Presencas({ user }) {
                   </table>
                 </div>
 
+
                 {/* Cards mobile */}
                 <div className="md:hidden p-4 space-y-3">
-                  {atletasOrdenados.map((atleta, index) => (
-                    <div
-                      key={atleta.id}
-                      className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2"
-                    >
+                  {currentAtletas.map((atleta, index) => (
+                    <div key={atleta.id} className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#0b1635] flex items-center justify-center text-white font-semibold text-sm">
                           {atleta.nome?.charAt(0) || "?"}
@@ -547,10 +596,9 @@ export default function Presencas({ user }) {
                           >
                             {atleta.stats.percentagem}%
                           </span>
-                          {index === 0 &&
-                            atleta.stats.percentagem >= 80 && (
-                              <Award className="w-4 h-4 text-emerald-600" />
-                            )}
+                          {index === 0 && atleta.stats.percentagem >= 80 && (
+                            <Award className="w-4 h-4 text-emerald-600" />
+                          )}
                         </div>
                         <span className="text-[11px] text-slate-500">
                           {atleta.stats.total} treinos
@@ -559,33 +607,65 @@ export default function Presencas({ user }) {
 
                       <div className="flex justify-between mt-2 text-xs">
                         <div className="flex flex-col items-center flex-1">
-                          <span className="text-slate-500 mb-1">
-                            Presenças
-                          </span>
+                          <span className="text-slate-500 mb-1">Presenças</span>
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-xs">
                             {atleta.stats.presentes}
                           </span>
                         </div>
                         <div className="flex flex-col items-center flex-1">
-                          <span className="text-slate-500 mb-1">
-                            Faltas
-                          </span>
+                          <span className="text-slate-500 mb-1">Faltas</span>
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-semibold text-xs">
                             {atleta.stats.faltas}
                           </span>
                         </div>
                         <div className="flex flex-col items-center flex-1">
-                          <span className="text-slate-500 mb-1">
-                            Justificadas
-                          </span>
+                          <span className="text-slate-500 mb-1">Justificadas</span>
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-semibold text-xs">
                             {atleta.stats.justificadas}
                           </span>
+                        </div>
+                        <div className="flex flex-col items-center flex-1">
+                          <span className="text-slate-500 mb-1">Atrasos</span>
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-semibold text-xs ${atleta.stats.atrasos > 0
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            {atleta.stats.atrasos}
+                          </span>
+                          {atleta.stats.atrasos > 0 && (
+                            <span className="text-[10px] text-purple-600 mt-[2px]">
+                              {atleta.stats.mediaMinutosAtraso}'
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {atletas.length > 0 && totalPages > 1 && (
+                  <div className="px-4 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Anterior
+                    </button>
+
+                    <span className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg">
+                      Página {currentPage} de {totalPages} ({atletas.length} atletas)
+                    </span>
+
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Seguinte
+                    </button>
+                  </div>
+                )}
+
               </>
             )}
           </div>

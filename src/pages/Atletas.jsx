@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate,useLocation  } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePermissions } from '../hooks/usePermissions';
 import ModalAtleta from "../components/atletas/ModalAtleta";
 import {
@@ -48,6 +48,14 @@ export default function Atletas({ user }) {
     observacoes: "",
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filtroEscalao]);
+
+
   useEffect(() => {
     if (!permissions.loading) {
       loadAtletas();
@@ -65,7 +73,7 @@ export default function Atletas({ user }) {
         id: doc.id,
         ...doc.data(),
       }));
-      
+
       setAtletas(data);
     } catch (error) {
       console.error("Erro ao carregar atletas:", error);
@@ -101,6 +109,12 @@ export default function Atletas({ user }) {
 
     return matchTexto && matchEscalao && matchPermissao;
   });
+
+  const totalPages = Math.ceil(filteredAtletas.length / itemsPerPage);
+
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentAtletas = filteredAtletas.slice(indexOfFirst, indexOfLast);
 
   const escaloesFiltrados = permissions.filterByEquipa(escaloes, "nome");
 
@@ -175,40 +189,40 @@ export default function Atletas({ user }) {
     });
   };
 
-// Dentro do componente:
-const headers = [
-  { 
-    key: 'numero', 
-    label: '#', 
-    render: (atleta) => (
-      <span className="font-semibold text-[#0b1635]">{atleta.numero}</span>
-    )
-  },
-  { 
-    key: 'nome', 
-    label: 'Nome',
-    render: (atleta) => (
-      <div>
-        <p className="font-medium">{atleta.nome}</p>
-        <p className="text-xs text-slate-500 md:hidden">{atleta.equipa}</p>
-      </div>
-    )
-  },
-  { 
-    key: 'equipa', 
-    label: 'Escalão',
-    hideOnMobile: true // Já aparece no nome em mobile
-  },
-  { 
-    key: 'posicao', 
-    label: 'Posição' 
-  },
-  { 
-    key: 'idade', 
-    label: 'Idade',
-    render: (atleta) => `${atleta.idade || '-'} anos`
-  },
-];
+  // Dentro do componente:
+  const headers = [
+    {
+      key: 'numero',
+      label: '#',
+      render: (atleta) => (
+        <span className="font-semibold text-[#0b1635]">{atleta.numero}</span>
+      )
+    },
+    {
+      key: 'nome',
+      label: 'Nome',
+      render: (atleta) => (
+        <div>
+          <p className="font-medium">{atleta.nome}</p>
+          <p className="text-xs text-slate-500 md:hidden">{atleta.equipa}</p>
+        </div>
+      )
+    },
+    {
+      key: 'equipa',
+      label: 'Escalão',
+      hideOnMobile: true // Já aparece no nome em mobile
+    },
+    {
+      key: 'posicao',
+      label: 'Posição'
+    },
+    {
+      key: 'idade',
+      label: 'Idade',
+      render: (atleta) => `${atleta.idade || '-'} anos`
+    },
+  ];
 
   const handleImportCSV = (event) => {
     if (!permissions.isAdmin && !permissions.isDirecao) {
@@ -228,7 +242,7 @@ const headers = [
       complete: async (results) => {
         try {
           const rows = results.data;
-       
+
 
           if (!Array.isArray(rows) || rows.length === 0) {
             alert("Ficheiro CSV vazio ou inválido.");
@@ -355,7 +369,11 @@ const headers = [
                     {permissions.equipas.length} equipa
                     {permissions.equipas.length > 1 ? "s" : ""}
                   </span>
+
                 )}
+                <span className="ml-2 text-[10px] sm:text-xs text-gray-500">
+                  (10 por página)
+                </span>
               </p>
             </div>
           </div>
@@ -448,7 +466,7 @@ const headers = [
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {filteredAtletas.map((atleta) => (
+            {currentAtletas.map((atleta) => (
               <div
                 key={atleta.id}
                 onClick={() => navigate(`/atletas/${atleta.id}`)}
@@ -575,23 +593,47 @@ const headers = [
             ))}
           </div>
         )}
+        {filteredAtletas.length > 0 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+
+            <span className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg">
+              Página {currentPage} de {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Seguinte
+            </button>
+          </div>
+
+        )}
       </main>
 
       {/* MODAL ADICIONAR/EDITAR RESPONSIVO */}
       {showAddModal && (
-        
-           <ModalAtleta
-        show={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          setEditingAtleta(null);
-        }}
-        escaloes={escaloes}
-        editingAtleta={editingAtleta ? formData : null}
-        onSubmit={handleSubmit}
-      />
 
-        )}
+        <ModalAtleta
+          show={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingAtleta(null);
+          }}
+          escaloes={escaloes}
+          editingAtleta={editingAtleta ? formData : null}
+          onSubmit={handleSubmit}
+        />
+
+      )}
     </div>
   );
 }

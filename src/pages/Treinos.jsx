@@ -196,17 +196,19 @@ export default function Treinos({ user }) {
       </header>
 
       {/* Conteúdo */}
-      <main className="px-4 md:px-8 py-4 md:py-6">
-        <Calendario
-          ano={currentYear}
-          mes={currentMonth}
-          treinos={treinosFiltrados}
-          escaloes={escaloesFiltrados}
-          loading={loading}
-          onMudarMes={handleMudarMes}
-          onTreinoClick={handleTreinoClick}
-          permissions={permissions}
-        />
+      <main className="px-4 sm:px-6 lg:px-8 py-6 overflow-x-auto pb-4">
+        <div className="max-w-full min-w-[320px]">
+          <Calendario
+            ano={currentYear}
+            mes={currentMonth}
+            treinos={treinosFiltrados}
+            escaloes={escaloesFiltrados}
+            loading={loading}
+            onMudarMes={handleMudarMes}
+            onTreinoClick={handleTreinoClick}
+            permissions={permissions}
+          />
+          </div>
       </main>
 
       {/* Modals */}
