@@ -36,6 +36,16 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
+     {
+      "collectionGroup": "captacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "criadoPorUid", "order": "ASCENDING" },
+        { "fieldPath": "escalao", "order": "ASCENDING" },
+        { "fieldPath": "tratadoTreinador", "order": "ASCENDING" },
+        { "fieldPath": "dataRegisto", "order": "DESCENDING" }
+      ]
+    },
     {
       "collectionGroup": "presencas",
       "queryScope": "COLLECTION",
