@@ -1,4 +1,4 @@
-import { Users, GraduationCap, TrendingUp, DollarSign, Calendar, CheckCircle, AlertCircle, Activity } from 'lucide-react';
+import { Users, GraduationCap, TrendingUp, DollarSign, Calendar, CheckCircle, AlertCircle, Activity, UserPlus } from 'lucide-react';
 
 export default function StatsCardsAdmin({ stats, loading }) {
   const cards = [
@@ -20,7 +20,7 @@ export default function StatsCardsAdmin({ stats, loading }) {
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
     },
-     {
+    {
       titulo: 'Treinadores',
       valor: stats.totalTreinadores,
       icone: Activity,
@@ -79,14 +79,15 @@ export default function StatsCardsAdmin({ stats, loading }) {
         return (
           <div
             key={idx}
-            className={`${card.bg} border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200`}
+            className={`${card.bg} border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200`}  
+            
           >
             <div className="flex items-start justify-between mb-3">
               <div className={`${card.iconBg} p-3 rounded-xl`}>
                 <Icone className={`w-6 h-6 ${card.iconColor}`} />
               </div>
             </div>
-            
+
             <h3 className="text-2xl font-bold text-slate-900 mb-1">
               {card.valor}
             </h3>

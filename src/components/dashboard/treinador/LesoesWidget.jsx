@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Plus } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../utils/firebase';
@@ -11,34 +11,85 @@ export default function LesoesWidget({ equipas }) {
     carregarLesoes();
   }, [equipas]);
 
-  const carregarLesoes = async () => {
-    if (!equipas || equipas.length === 0) {
+const carregarLesoes = async () => {
+  if (!equipas || equipas.length === 0) {
+    setLesoes([]);
+    setLoading(false);
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    // 1. Buscar TODOS os atletas das equipas
+    const atletasRef = collection(db, 'atletas');
+    const atletasQuery = query(
+      atletasRef,
+      where('equipa', 'in', equipas)
+    );
+    
+    const atletasSnap = await getDocs(atletasQuery);
+    const atletasMap = new Map();
+    
+    // Criar mapa atletaId → dados do atleta
+    atletasSnap.forEach(doc => {
+      atletasMap.set(doc.id, {
+        nome: doc.data().nome || 'Atleta Sem Nome',
+        numero: doc.data().numero || ''
+      });
+    });
+    
+    const atletaIds = Array.from(atletasMap.keys());
+    
+    if (atletaIds.length === 0) {
+      setLesoes([]);
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      const atletasRef = collection(db, 'atletas');
-      const q = query(
-        atletasRef,
-        where('equipa', 'in', equipas),
-        where('estado', '==', 'lesionado') // ou 'indisponivel'
+    // 2. Processar episódios clínicos em lotes de 30
+    const episodiosRef = collection(db, 'episodiosClinicos');
+    const todosLesoes = [];
+    
+    for (let i = 0; i < atletaIds.length; i += 30) {
+      const lote = atletaIds.slice(i, i + 30);
+      
+      const episodiosQuery = query(
+        episodiosRef,
+        where('atletaId', 'in', lote),
+        where('estado', '==', 'ativo')
       );
       
-      const snap = await getDocs(q);
-      const dados = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const episodiosSnap = await getDocs(episodiosQuery);
       
-      setLesoes(dados);
-    } catch (err) {
-      console.error('Erro ao carregar lesões:', err);
-    } finally {
-      setLoading(false);
+      episodiosSnap.forEach(doc => {
+        const data = doc.data();
+        const atleta = atletasMap.get(data.atletaId);
+        
+        todosLesoes.push({
+          id: doc.id,
+          atletaId: data.atletaId,
+          nome: atleta ? atleta.nome : 'Atleta Sem Nome',
+          numero: atleta ? atleta.numero : '',
+          diagnosticoFuncional: data.diagnosticoFuncional,
+          planoTratamento: data.planoTratamento,
+          previsaoRetorno: data.previsaoRetorno,
+          restricoesTreinoJogo: data.restricoesTreinoJogo,
+          dataInicio: data.dataInicio
+        });
+      });
     }
-  };
+    
+    setLesoes(todosLesoes);
+  } catch (err) {
+    console.error('Erro ao carregar lesões:', err);
+    setLesoes([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   if (loading) {
     return (
@@ -80,30 +131,41 @@ export default function LesoesWidget({ equipas }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {lesoes.map((atleta) => (
-            <div key={atleta.id} className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          {lesoes.map((lesao) => (
+            <div key={lesao.id} className="p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-full bg-red-200 flex items-center justify-center text-xs font-semibold text-red-800">
-                      {atleta.nome?.charAt(0) || '?'}
+                      {lesao.nome?.charAt(0) || '?'}
                     </div>
                     <p className="font-semibold text-sm text-slate-900 truncate">
-                      {atleta.nome}
+                      {lesao.nome}
                     </p>
                   </div>
-                  <p className="text-xs text-red-700 ml-9">
-                    {atleta.motivoIndisponibilidade || atleta.lesao || 'Indisponível'}
+                  {/* Motivo principal - diagnóstico funcional */}
+                  <p className="text-xs text-red-700 ml-9 mb-1 font-medium">
+                    {lesao.diagnosticoFuncional || 'Indisponível'}
                   </p>
+                  {/* Restrições */}
+                  {lesao.restricoesTreinoJogo && (
+                    <p className="text-xs text-red-600 ml-9 text-[10px]">
+                      {lesao.restricoesTreinoJogo}
+                    </p>
+                  )}
+                  {/* Plano de tratamento */}
+                  {lesao.planoTratamento && (
+                    <p className="text-xs text-slate-600 ml-9 text-[10px] mt-1">
+                      {lesao.planoTratamento}
+                    </p>
+                  )}
                 </div>
-                {atleta.previsaoRetorno && (
+                {/* Previsão de retorno */}
+                {lesao.previsaoRetorno && (
                   <div className="text-right flex-shrink-0">
                     <p className="text-[10px] text-slate-500 mb-0.5">Retorno</p>
                     <p className="text-xs font-bold text-red-700">
-                      {new Date(atleta.previsaoRetorno).toLocaleDateString('pt-PT', {
-                        day: 'numeric',
-                        month: 'short'
-                      })}
+                      {lesao.previsaoRetorno}
                     </p>
                   </div>
                 )}
@@ -112,7 +174,6 @@ export default function LesoesWidget({ equipas }) {
           ))}
         </div>
       )}
-
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { usePermissions } from '../hooks/usePermissions';
+import { useState } from 'react'; 
 import { useDashboardAdmin } from '../hooks/useDashboardAdmin';
 import StatsCardsAdmin from '../components/dashboard/admin/StatsCardsAdmin';
 import QuotasOverviewWidget from '../components/dashboard/admin/QuotasOverviewWidget';
@@ -34,6 +35,10 @@ export default function DashboardAdmin({ user }) {
     recarregar,
   } = useDashboardAdmin();
 
+  const [captacaoParaDetalhes, setCaptacaoParaDetalhes] = useState(null);
+  const abrirCaptacaoModal = (captacao) => {
+    setCaptacaoParaDetalhes(captacao);
+  };
   const dataFormatada = new Date().toLocaleDateString('pt-PT', {
     weekday: 'long',
     day: 'numeric',
@@ -41,7 +46,7 @@ export default function DashboardAdmin({ user }) {
     year: 'numeric',
   });
 
-  const primeiroNome = user?.displayName?.split(' ')[0] || user?.nome ||  'Admin';
+  const primeiroNome = user?.displayName?.split(' ')[0] || user?.nome || 'Admin';
 
   // Calcular total de alertas críticos + atenção
   const alertasUrgentes = (alertas?.criticos?.length || 0) + (alertas?.atencao?.length || 0);
@@ -93,26 +98,17 @@ export default function DashboardAdmin({ user }) {
       {/* Main Content */}
       <div className="px-4 md:px-8 py-6 md:py-8">
         {/* Stats Cards */}
-        <StatsCardsAdmin stats={stats} loading={loading} />
+        <StatsCardsAdmin stats={stats} loading={loading} navigate={navigate} />
 
-        {/* NOVO: Card de métricas de captação (opcional, acima do grid) */}
-        {metricasCaptacao && metricasCaptacao.totalPendentes > 0 && (
-          <div className="mb-6 bg-slate-900 rounded-xl p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">📋 Captações</h3>
-                <p className="text-blue-100 text-sm">
-                  {metricasCaptacao.totalPendentes} aguardam aprovação da direção
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold">{metricasCaptacao.taxaAprovacao}%</div>
-                <div className="text-blue-100 text-xs">taxa de aprovação</div>
-              </div>
-            </div>
-          </div>
+        {captacaoParaDetalhes && (
+          <CaptacaoDetailsModal
+            open={true}
+            onClose={() => setCaptacaoParaDetalhes(null)}
+            captacao={captacaoParaDetalhes}
+            permissions={{ isTreinador: false }} // Direção
+            onAprovarAtleta={() => { /* já implementado */ }}
+          />
         )}
-
         {/* Grid Principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Coluna Esquerda (2/3) */}
@@ -122,24 +118,25 @@ export default function DashboardAdmin({ user }) {
               alertas={alertas}
               loading={loading}
               recarregarDashboard={recarregar} // ADICIONA ESTA PROP
+              onAbrirCaptacao={abrirCaptacaoModal}
             />
 
-             {/* Card Firebase Monitoring */}
-        <div
-          onClick={() => navigate('/firebase-monitoring')}
-          className="bg-slate-900 rounded-2xl shadow-lg p-6 text-white hover:shadow-xl transition-all cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <Activity className="w-8 h-8" />
-            <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-medium">
-              Monitoring
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold mb-2">Firebase</h3>
-          <p className="text-purple-100 text-sm">
-            Monitorizar custos e uso
-          </p>
-        </div>
+            {/* Card Firebase Monitoring */}
+            <div
+              onClick={() => navigate('/firebase-monitoring')}
+              className="bg-slate-900 rounded-2xl shadow-lg p-6 text-white hover:shadow-xl transition-all cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <Activity className="w-8 h-8" />
+                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-medium">
+                  Monitoring
+                </span>
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Firebase</h3>
+              <p className="text-purple-100 text-sm">
+                Monitorizar custos e uso
+              </p>
+            </div>
 
 
           </div>
@@ -153,7 +150,7 @@ export default function DashboardAdmin({ user }) {
             />
           </div>
         </div>
-       
+
       </div>
     </div>
   );

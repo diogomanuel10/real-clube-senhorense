@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useCallback  } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 
 export function useDashboardAdmin() {
@@ -10,6 +10,7 @@ export function useDashboardAdmin() {
     taxaAssiduidadeGeral: 0,
     quotasPagas: 0,
     quotasPendentes: 0,
+    captacoesPendentes: 0,
     receitaMensal: 0,
     treinosSemana: 0,
   });
@@ -48,6 +49,43 @@ export function useDashboardAdmin() {
   useEffect(() => {
     carregarDados();
   }, []);
+
+// Adiciona no useDashboardAdmin:
+const contarCaptacoesPendentes = useCallback(async () => {
+  try {
+    const snap = await getDocs(collection(db, "captacoes"), 
+      where("aprovadoDirecao", "==", "pendente")
+    );
+    const totalPendentes = snap.size;
+    
+    // Taxa de conversão (exemplo)
+    const aprovadasSnap = await getDocs(collection(db, "captacoes"), 
+      where("aprovadoDirecao", "==", "sim")
+    );
+    const taxaConversao = totalPendentes > 0 
+      ? Math.round((aprovadasSnap.size / (totalPendentes + aprovadasSnap.size)) * 100)
+      : 0;
+
+    return {
+      totalPendentes,
+      totalAprovadas: aprovadasSnap.size,
+      taxaConversao
+    };
+  } catch (err) {
+    console.error("Erro ao contar captações:", err);
+    return { totalPendentes: 0, totalAprovadas: 0, taxaConversao: 0 };
+  }
+}, []);
+
+// No useEffect principal:
+useEffect(() => {
+  const carregarDados = async () => {
+    // ... outros dados ...
+    const captacoesData = await contarCaptacoesPendentes();
+    setMetricasCaptacao(captacoesData);
+  };
+  carregarDados();
+}, [contarCaptacoesPendentes]);
 
   const carregarDados = async () => {
     try {
@@ -477,6 +515,7 @@ export function useDashboardAdmin() {
         totalAtletas: todosAtletas.length,
         totalTreinadores: todosTreinadores.length,
         totalEscaloes: todosEscaloes.length,
+        captacoesPendentes: captacoesPendentes.length, 
         taxaAssiduidadeGeral,
         quotasPagas: quotasPagas.length,
         quotasPendentes: quotasPendentes.length,

@@ -10,6 +10,7 @@ import UltimoJogoWidget from '../components/dashboard/treinador/UltimoJogoWidget
 import ComunicadosWidgetTreinador from '../components/dashboard/treinador/ComunicadosWidgetTreinador';
 import AvaliacoesPendentesWidget from '../components/dashboard/treinador/AvaliacoesPendentesWidget';
 import { RefreshCw, Users, Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import CaptaçõesAprovadasWidget from '../components/dashboard/treinador/CaptaçõesAprovadasWidget';
 import { useNavigate } from "react-router-dom";
 
 export default function DashboardTreinador({ user }) {
@@ -115,6 +116,7 @@ export default function DashboardTreinador({ user }) {
 
         {/* Grid Principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
           {/* Coluna Principal (2/3) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Treinos */}
@@ -124,7 +126,7 @@ export default function DashboardTreinador({ user }) {
                 proximosTreinos={proximosTreinos}
                 loading={loading}
               />
-
+              <br></br>
               <AvaliacoesPendentesWidget
                 treinosHoje={treinosHoje}
                 user={user}
@@ -133,11 +135,6 @@ export default function DashboardTreinador({ user }) {
               />
 
             </div>
-
-            {/* 👇 NOVO - Último Jogo */}
-            <UltimoJogoWidget equipas={permissions.equipas} />
-
-
 
           </div>
 
@@ -152,6 +149,11 @@ export default function DashboardTreinador({ user }) {
             </div>
 
             <LesoesWidget equipas={permissions.equipas} />
+
+            <CaptaçõesAprovadasWidget
+              escaloes={permissions.equipas}
+              treinadorUid={user.uid}
+            />
 
             <ComunicadosWidgetTreinador
               comunicados={comunicados}

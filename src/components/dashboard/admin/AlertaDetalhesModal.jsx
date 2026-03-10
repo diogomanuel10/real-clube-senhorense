@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { X, Check, Phone, Mail, AlertCircle, Clock, Trash2 } from 'lucide-react';
+import { X, Check, Phone, Mail, AlertCircle, Clock, Trash2, Eye } from 'lucide-react';
 import { useAlertasActions } from '../../../hooks/useAlertasActions';
+import { useNavigate } from 'react-router-dom';
 
-export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboard, onRemoverItem }) { // 👈 ADICIONA onRemoverItem
+export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboard, onRemoverItem, onVerCaptacao }) {
+  const navigate = useNavigate();  // ← ADICIONA
   const [processando, setProcessando] = useState(false);
   const [itemSelecionado, setItemSelecionado] = useState(null);
-  
+
   const {
     marcarQuotaPaga,
     aprovarCaptacao,
@@ -25,10 +27,17 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
 
     try {
       switch (acao) {
+        case 'ver-captacoes':
+          window.location.href = `/captacoes?captacao=${item.id}`;
+          onClose();
+          return;
         case 'marcar-pago':
           sucesso = await marcarQuotaPaga(item.id);
           break;
         case 'aprovar-captacao':
+          if (!window.confirm(`Aprovar "${item.nome}" e criar atleta no escalão ${item.escalao}?`)) {
+            return;
+          }
           sucesso = await aprovarCaptacao(item.id);
           break;
         case 'rejeitar-captacao':
@@ -52,7 +61,7 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
       // 👇 NOVO: Remove item localmente se sucesso
       if (sucesso) {
         onRemoverItem?.(item.id); // Remove do array local
-        
+
         // Se era o último item, fecha o modal
         if (alerta.dados.length <= 1) {
           onClose();
@@ -85,19 +94,14 @@ export default function AlertaDetalhesModal({ alerta, onClose, recarregarDashboa
     if (alerta.id === 'captacoes-antigas' || alerta.id === 'captacoes-recentes') {
       return [
         {
-          id: 'aprovar-captacao',
-          label: 'Aprovar',
-          icon: Check,
-          cor: 'green',
-        },
-        {
-          id: 'rejeitar-captacao',
-          label: 'Rejeitar',
-          icon: X,
-          cor: 'red',
+          id: 'ver-captacoes',
+          label: 'Ver Captação',
+          icon: Eye,
+          cor: 'blue',
         },
       ];
     }
+
 
     if (alerta.id === 'atletas-inativos' || alerta.id === 'assiduidade-baixa') {
       return [

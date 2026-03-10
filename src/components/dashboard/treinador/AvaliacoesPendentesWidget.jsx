@@ -101,7 +101,6 @@ export default function AvaliacoesPendentesWidget({ user, permissions, recarrega
         }
     };
 
-    console.log(treinoAvaliando)
     if (pendentes.length === 0) return null;
 
     if (loadingAtletas) {

@@ -1,6 +1,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import toast from 'react-hot-toast';
+import { useState, useCallback } from 'react'; 
 
 export function useAlertasActions(recarregarDashboard) {
   
@@ -26,25 +27,59 @@ export function useAlertasActions(recarregarDashboard) {
   };
 
   // Aprovar captação
-  const aprovarCaptacao = async (captacaoId) => {
-    const loadingToast = toast.loading('Aprovando captação...');
-    
-    try {
-      const captacaoRef = doc(db, 'captacoes', captacaoId);
-      await updateDoc(captacaoRef, {
-        aprovadoDirecao: 'aprovado',
-        dataAprovacao: new Date().toISOString(),
-      });
-      
-      toast.success('Captação aprovada!', { id: loadingToast });
-      recarregarDashboard();
-      return true;
-    } catch (error) {
-      console.error('Erro ao aprovar captação:', error);
-      toast.error('Erro ao aprovar captação', { id: loadingToast });
+const aprovarCaptacao = async (captacaoId) => {
+  try {
+    // 1. Busca dados da captação
+    const captacaoDoc = await getDoc(doc(db, "captacoes", captacaoId));
+    const captacao = { id: captacaoId, ...captacaoDoc.data() };
+
+    if (!captacao) {
+      alert("❌ Captação não encontrada");
       return false;
     }
-  };
+
+    // 2. CONFIRMAÇÃO
+    if (!window.confirm(`Aprovar "${captacao.nome}" e criar atleta no escalão ${captacao.escalao}?`)) {
+      return false;
+    }
+
+    // 3. CRIAR ATLETA
+    const novoAtleta = {
+      nome: captacao.nome,
+      idade: parseInt(captacao.idade),
+      escalao: captacao.escalao,
+      telemovel: captacao.telemovel || "",
+      email: captacao.email || "",
+      encarregadoNome: captacao.encarregadoNome || "",
+      encarregadoTelefone: captacao.encarregadoTelefone || "",
+      dataIncricao: new Date().toISOString(),
+      ativo: true,
+      origemCaptacao: captacaoId,
+    };
+
+    await addDoc(collection(db, "atletas"), novoAtleta);
+
+    // 4. Atualizar escalão
+    await updateDoc(doc(db, "escaloes", captacao.escalao), {
+      atletas: arrayUnion(captacao.nome)
+    });
+
+    // 5. Marcar captação como aprovada
+    await updateDoc(doc(db, "captacoes", captacaoId), {
+      aprovadoDirecao: "sim",
+      dataAprovacao: new Date().toISOString(),
+      estado: "aprovado"
+    });
+
+    recarregarDashboard();
+    alert("✅ Atleta criado com sucesso!");
+    return true;
+  } catch (err) {
+    console.error("Erro ao aprovar:", err);
+    alert("❌ Erro: " + err.message);
+    return false;
+  }
+};
 
   // Rejeitar captação
   const rejeitarCaptacao = async (captacaoId) => {
