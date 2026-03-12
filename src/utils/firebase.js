@@ -1,3 +1,4 @@
+// src/utils/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -12,9 +13,14 @@ const firebaseConfig = {
   appId: "1:687082892402:web:452798a2aa8c71b0cea6eb"
 };
 
-export const app = initializeApp(firebaseConfig); 
+// App principal (sessão do utilizador logado)
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// ✅ Segunda app — só para criar utilizadores sem fazer logout
+export const appSecundaria = initializeApp(firebaseConfig, 'secondary');
+export const authSecundaria = getAuth(appSecundaria);
 
 export default app;

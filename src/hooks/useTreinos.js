@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { useClub } from '../contexts/ClubContext'; // ← NOVO
 
 export const useTreinos = () => {
+  const { clubId } = useClub(); // ← NOVO
   const [treinos, setTreinos] = useState([]);
   const [escaloes, setEscaloes] = useState([]);
   const [planos, setPlanos] = useState([]);
@@ -12,9 +14,9 @@ export const useTreinos = () => {
     setLoading(true);
     try {
       const [treinosSnap, escaloesSnap, planosSnap] = await Promise.all([
-        getDocs(collection(db, 'treinos')),
-        getDocs(collection(db, 'escaloes')),
-        getDocs(collection(db, 'planosTreino')),
+        getDocs(collection(db, `clubs/${clubId}/treinos`)),     // ← NOVO PATH
+        getDocs(collection(db, `clubs/${clubId}/escaloes`)),    // ← NOVO PATH
+        getDocs(collection(db, `clubs/${clubId}/planosTreino`)),// ← NOVO PATH
       ]);
 
       const treinosData = treinosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -34,8 +36,8 @@ export const useTreinos = () => {
   };
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (clubId) carregarDados(); // ← só carrega quando clubId estiver pronto
+  }, [clubId]); // ← NOVO: re-carrega se clube mudar
 
   return {
     treinos,

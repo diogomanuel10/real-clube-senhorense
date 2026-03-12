@@ -2,25 +2,27 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { useClub } from '../contexts/ClubContext';
 
 export const useAvaliacoesEquipa = (equipaId) => {
+  const { clubId } = useClub();
   const [avaliacoes, setAvaliacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [atletasStats, setAtletasStats] = useState({});
 
   useEffect(() => {
-    if (!equipaId) return;
+    if (!equipaId || !clubId) return;
 
     const fetchAvaliacoes = async () => {
       setLoading(true);
       try {
         const q = query(
-          collection(db, 'avaliacoes_treino'),
+          collection(db, `clubs/${clubId}/avaliacoes_treino`), // ← NOVO PATH
           where('equipa', '==', equipaId),
           orderBy('createdAt', 'desc')
         );
         const snapshot = await getDocs(q);
-        
+
         const avaliacoesList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -45,7 +47,7 @@ export const useAvaliacoesEquipa = (equipaId) => {
     };
 
     fetchAvaliacoes();
-  }, [equipaId]);
+  }, [equipaId, clubId]); // ← clubId no dependency array
 
   return { avaliacoes, loading, atletasStats };
 };

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { useClub } from '../contexts/ClubContext';
 
 // aceita string OU array
 export const useAtletasEquipa = (equipasInput) => {
+  const { clubId } = useClub();
   const [atletas, setAtletas] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,7 +17,7 @@ export const useAtletasEquipa = (equipasInput) => {
       ? [equipasInput]
       : [];
 
-    if (equipas.length === 0) {
+    if (equipas.length === 0 || !clubId) {
       setAtletas([]);
       setLoading(false);
       return;
@@ -27,7 +29,7 @@ export const useAtletasEquipa = (equipasInput) => {
         // 1 query por equipa em paralelo
         const queries = equipas.map(eq =>
           query(
-            collection(db, 'atletas'),
+            collection(db, `clubs/${clubId}/atletas`), // ← NOVO PATH
             where('equipa', '==', eq)
           )
         );
@@ -48,7 +50,7 @@ export const useAtletasEquipa = (equipasInput) => {
     };
 
     fetchAtletas();
-  }, [equipasInput]);
+  }, [equipasInput, clubId]); // ← clubId no dependency array
 
   return { atletas, loading };
 };

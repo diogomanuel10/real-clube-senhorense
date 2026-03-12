@@ -1,160 +1,168 @@
-import { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
+// src/pages/Login.jsx
+import { useState, useEffect } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nome, setNome] = useState('');
-  const [idade, setIdade] = useState('');
-  const [telemovel, setTelemovel] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const [clube, setClube] = useState(null);
+  const [carregandoClube, setCarregandoClube] = useState(false);
+
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clubeParam = searchParams.get('clube'); // ex: ?clube=esmoriz
+
+  useEffect(() => {
+    if (!clubeParam) return;
+    carregarClube(clubeParam);
+  }, [clubeParam]);
+
+  const carregarClube = async (clubeId) => {
+    setCarregandoClube(true);
+    try {
+      const snap = await getDoc(doc(db, 'clubs', clubeId));
+      if (snap.exists()) {
+        setClube({ id: snap.id, ...snap.data() });
+      }
+    } catch (err) {
+      console.error('Erro ao carregar clube:', err);
+    } finally {
+      setCarregandoClube(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErro('');
     setLoading(true);
-    
     try {
-      let userCredential;
-      if (isLogin) {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Criar utilizador sem role definida (será atribuída pelo admin)
-        await setDoc(doc(db, 'utilizadores', userCredential.user.uid), {
-          email: email,
-          nome: nome,
-          idade: idade || null,
-          telemovel: telemovel || null,
-          role: 'pendente', // Role pendente até aprovação do admin
-          dataCriacao: new Date().toISOString(),
-          ativo: false // Inativo até ser aprovado pelo admin
-        });
-        
-        alert('Conta criada! Aguarda aprovação do administrador.');
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       navigate('/');
     } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro: ' + error.message);
+      const msg =
+        error.code === 'auth/user-not-found'    ? 'Email não encontrado.' :
+        error.code === 'auth/wrong-password'     ? 'Password incorreta.' :
+        error.code === 'auth/invalid-credential' ? 'Email ou password incorretos.' :
+        error.code === 'auth/too-many-requests'  ? 'Demasiadas tentativas. Tenta mais tarde.' :
+        'Erro ao iniciar sessão. Tenta novamente.';
+      setErro(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  // Cores e branding dinâmicos — fallback genérico se não vier ?clube=
+  const corPrimaria    = clube?.branding?.corPrimaria || '#2563eb';
+  const corDestaque    = clube?.branding?.corDestaque || '#3b82f6';
+  const nomePlataforma = clube?.nome || 'ClubSide';
+  const logoUrl        = clube?.branding?.logoUrl || null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 transition-all duration-500"
+      style={{ background: `linear-gradient(135deg, ${corPrimaria}ee, ${corDestaque}cc)` }}
+    >
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+
+        {/* Header com branding dinâmico */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Real Clube Senhorense</h1>
-          <p className="text-gray-600">{isLogin ? 'Iniciar sessão' : 'Registo'}</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ex: João Silva"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Idade</label>
-                  <input
-                    type="number"
-                    value={idade}
-                    onChange={(e) => setIdade(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    placeholder="25"
-                    min="1"
-                    max="99"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Telemóvel</label>
-                  <input
-                    type="tel"
-                    value={telemovel}
-                    onChange={(e) => setTelemovel(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    placeholder="916 123 456"
-                  />
-                </div>
-              </div>
-            </>
+          {carregandoClube ? (
+            <div className="h-16 w-16 mx-auto rounded-full bg-gray-100 animate-pulse mb-4" />
+          ) : logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={nomePlataforma}
+              className="h-16 w-16 mx-auto rounded-full object-contain mb-4 shadow-lg"
+            />
+          ) : (
+            <div
+              className="h-16 w-16 mx-auto rounded-full flex items-center justify-center text-3xl mb-4 shadow-lg"
+              style={{ backgroundColor: `${corPrimaria}22` }}
+            >
+              🏆
+            </div>
           )}
 
+          {carregandoClube ? (
+            <span className="block h-8 w-48 mx-auto bg-gray-200 rounded-lg animate-pulse mb-1" />
+          ) : (
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">{nomePlataforma}</h1>
+          )}
+
+          <p className="text-gray-500 text-sm">Iniciar sessão</p>
+
+          {clube?.branding?.lema && (
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mt-1"
+              style={{ color: corPrimaria }}
+            >
+              {clube.branding.lema}
+            </p>
+          )}
+        </div>
+
+        {/* Formulário */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="joao@senhorense.pt"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent transition-all"
+              placeholder="o-teu@email.pt"
               required
+              autoFocus
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Palavra-passe *</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent transition-all"
               placeholder="Mínimo 6 caracteres"
               required
               minLength="6"
             />
           </div>
 
+          {/* Mensagem de erro */}
+          {erro && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
+              ⚠️ {erro}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl"
+            className="w-full text-white py-4 px-6 rounded-xl font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl hover:brightness-110"
+            style={{ backgroundColor: corPrimaria }}
           >
             {loading ? (
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span className="mt-1">A processar...</span>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                A entrar...
               </div>
-            ) : (
-              isLogin ? 'Entrar' : 'Criar Conta'
-            )}
+            ) : 'Entrar'}
           </button>
         </form>
 
-        <div className="text-center space-y-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 py-3 px-4 rounded-xl font-medium transition-all"
-          >
-            {isLogin ? 'Criar nova conta' : 'Já tenho conta'}
-          </button>
-          
-          {!isLogin && (
-            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
-              <p className="text-blue-600 font-medium">
-                ℹ️ Após o registo, a tua conta ficará pendente até ser aprovada por um administrador.
-              </p>
-            </div>
-          )}
-        </div>
+        <p className="text-center text-xs text-gray-400 pt-2 border-t border-gray-100">
+          Não tens conta?{' '}
+          <span className="font-medium" style={{ color: corPrimaria }}>
+            Pede o link de convite ao teu administrador.
+          </span>
+        </p>
       </div>
     </div>
   );

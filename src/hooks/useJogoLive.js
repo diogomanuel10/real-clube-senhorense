@@ -2,31 +2,22 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  collection,
-  addDoc,
-  deleteDoc,
-  doc,
-  getDocs,
-  getDoc,
-  query,
-  where,
-  updateDoc,
-  Timestamp,
-  writeBatch,
+  collection, addDoc, deleteDoc, doc, getDocs,
+  getDoc, query, where, updateDoc, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { useClub } from '../contexts/ClubContext';
 
 export function useJogoLive(jogoId) {
   const navigate = useNavigate();
-  
+  const { clubId } = useClub();
+
   const [jogo, setJogo] = useState(null);
   const [atletas, setAtletas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [historico, setHistorico] = useState([]);
   const [setAtual, setSetAtual] = useState(1);
   const [atletasEmCampo, setAtletasEmCampo] = useState([]);
-  
-  // NOVO: Resultado por set
   const [resultadosPorSet, setResultadosPorSet] = useState({
     1: { nos: 0, adversario: 0 },
     2: { nos: 0, adversario: 0 },
@@ -34,20 +25,18 @@ export function useJogoLive(jogoId) {
     4: { nos: 0, adversario: 0 },
     5: { nos: 0, adversario: 0 },
   });
-  
   const [stats, setStats] = useState({});
 
   useEffect(() => {
-    if (jogoId) {
+    if (jogoId && clubId) {
       loadJogo();
       loadHistorico();
     }
-  }, [jogoId]);
+  }, [jogoId, clubId]); // ← clubId no dependency array
 
   const loadJogo = async () => {
     try {
-      const docRef = doc(db, 'jogos', jogoId);
-      const docSnap = await getDoc(docRef);
+      const docSnap = await getDoc(doc(db, `clubs/${clubId}/jogos`, jogoId)); // ← NOVO
 
       if (docSnap.exists()) {
         const jogoData = {
@@ -58,12 +47,7 @@ export function useJogoLive(jogoId) {
             : new Date(docSnap.data().data),
         };
         setJogo(jogoData);
-        
-        // Carregar resultados por set se existirem
-        if (jogoData.resultadosPorSet) {
-          setResultadosPorSet(jogoData.resultadosPorSet);
-        }
-        
+        if (jogoData.resultadosPorSet) setResultadosPorSet(jogoData.resultadosPorSet);
         await loadAtletas(jogoData.equipa);
       } else {
         toast.error('Jogo não encontrado');
@@ -79,26 +63,20 @@ export function useJogoLive(jogoId) {
 
   const loadAtletas = async (equipa) => {
     try {
-      const q = query(collection(db, 'atletas'), where('equipa', '==', equipa));
+      const q = query(
+        collection(db, `clubs/${clubId}/atletas`), // ← NOVO
+        where('equipa', '==', equipa)
+      );
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAtletas(data);
 
       const initialStats = {};
-      data.forEach((atleta) => {
+      data.forEach(atleta => {
         initialStats[atleta.id] = {
-          pontos: 0,
-          aces: 0,
-          bloqueios: 0,
-          ataques: 0,
-          ataquesEficazes: 0,
-          defesas: 0,
-          erros: 0,
-          errosAtaque: 0,
-          errosServico: 0,
+          pontos: 0, aces: 0, bloqueios: 0, ataques: 0,
+          ataquesEficazes: 0, defesas: 0, erros: 0,
+          errosAtaque: 0, errosServico: 0,
         };
       });
       setStats(initialStats);
@@ -110,16 +88,14 @@ export function useJogoLive(jogoId) {
   const loadHistorico = async () => {
     try {
       const q = query(
-        collection(db, 'acoes_jogo'),
+        collection(db, `clubs/${clubId}/acoes_jogo`), // ← NOVO
         where('jogoId', '==', jogoId)
       );
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
 
-      data.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
       setHistorico(data);
       recalcularStats(data);
       recalcularResultadosPorSet(data);
@@ -130,26 +106,18 @@ export function useJogoLive(jogoId) {
 
   const recalcularResultadosPorSet = (acoes) => {
     const novoResultado = {
-      1: { nos: 0, adversario: 0 },
-      2: { nos: 0, adversario: 0 },
-      3: { nos: 0, adversario: 0 },
-      4: { nos: 0, adversario: 0 },
+      1: { nos: 0, adversario: 0 }, 2: { nos: 0, adversario: 0 },
+      3: { nos: 0, adversario: 0 }, 4: { nos: 0, adversario: 0 },
       5: { nos: 0, adversario: 0 },
     };
 
-    acoes.forEach((acao) => {
+    acoes.forEach(acao => {
       const set = acao.set || 1;
-      
-      if (!novoResultado[set]) {
-        novoResultado[set] = { nos: 0, adversario: 0 };
-      }
+      if (!novoResultado[set]) novoResultado[set] = { nos: 0, adversario: 0 };
 
-      // Pontos para NÓS
       if (['ataque_ponto', 'servico_ace', 'bloco_ponto', 'erro_adversario'].includes(acao.tipo)) {
         novoResultado[set].nos++;
-      }
-      // Pontos para ADVERSÁRIO
-      else if (['erro_equipa', 'ponto_adversario', 'ataque_erro', 'servico_erro'].includes(acao.tipo)) {
+      } else if (['erro_equipa', 'ponto_adversario', 'ataque_erro', 'servico_erro'].includes(acao.tipo)) {
         novoResultado[set].adversario++;
       }
     });
@@ -159,129 +127,70 @@ export function useJogoLive(jogoId) {
 
   const recalcularStats = (acoes) => {
     const newStats = {};
-
-    atletas.forEach((atleta) => {
+    atletas.forEach(atleta => {
       newStats[atleta.id] = {
-        pontos: 0,
-        aces: 0,
-        bloqueios: 0,
-        ataques: 0,
-        ataquesEficazes: 0,
-        defesas: 0,
-        erros: 0,
-        errosAtaque: 0,
-        errosServico: 0,
+        pontos: 0, aces: 0, bloqueios: 0, ataques: 0,
+        ataquesEficazes: 0, defesas: 0, erros: 0,
+        errosAtaque: 0, errosServico: 0,
       };
     });
 
-    acoes.forEach((acao) => {
-      if (newStats[acao.atletaId]) {
-        const tipo = acao.tipo;
+    acoes.forEach(acao => {
+      if (!newStats[acao.atletaId]) return;
+      const s = newStats[acao.atletaId];
+      const t = acao.tipo;
 
-        if (tipo === 'ataque_ponto') {
-          newStats[acao.atletaId].ataques += 1;
-          newStats[acao.atletaId].ataquesEficazes += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'ataque_continuidade') {
-          newStats[acao.atletaId].ataques += 1;
-        } else if (tipo === 'ataque_erro') {
-          newStats[acao.atletaId].ataques += 1;
-          newStats[acao.atletaId].erros += 1;
-          newStats[acao.atletaId].errosAtaque += 1;
-        } else if (tipo === 'servico_ace') {
-          newStats[acao.atletaId].aces += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'servico_erro') {
-          newStats[acao.atletaId].erros += 1;
-          newStats[acao.atletaId].errosServico += 1;
-        } else if (tipo === 'bloco_ponto') {
-          newStats[acao.atletaId].bloqueios += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
-          newStats[acao.atletaId].defesas += 1;
-        }
-        // Compatibilidade com sistema antigo
-        else if (tipo === 'ace') {
-          newStats[acao.atletaId].aces += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'bloqueio') {
-          newStats[acao.atletaId].bloqueios += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'ataque') {
-          newStats[acao.atletaId].ataques += 1;
-          newStats[acao.atletaId].ataquesEficazes += 1;
-          newStats[acao.atletaId].pontos += 1;
-        } else if (tipo === 'defesa') {
-          newStats[acao.atletaId].defesas += 1;
-        } else if (tipo === 'erro_ataque') {
-          newStats[acao.atletaId].erros += 1;
-          newStats[acao.atletaId].errosAtaque += 1;
-        } else if (tipo === 'erro_servico') {
-          newStats[acao.atletaId].erros += 1;
-          newStats[acao.atletaId].errosServico += 1;
-        }
-      }
+      if (t === 'ataque_ponto')        { s.ataques++; s.ataquesEficazes++; s.pontos++; }
+      else if (t === 'ataque_continuidade') { s.ataques++; }
+      else if (t === 'ataque_erro')    { s.ataques++; s.erros++; s.errosAtaque++; }
+      else if (t === 'servico_ace')    { s.aces++; s.pontos++; }
+      else if (t === 'servico_erro')   { s.erros++; s.errosServico++; }
+      else if (t === 'bloco_ponto')    { s.bloqueios++; s.pontos++; }
+      else if (t === 'defesa_boa' || t === 'defesa_tocou') { s.defesas++; }
+      // Compatibilidade sistema antigo
+      else if (t === 'ace')            { s.aces++; s.pontos++; }
+      else if (t === 'bloqueio')       { s.bloqueios++; s.pontos++; }
+      else if (t === 'ataque')         { s.ataques++; s.ataquesEficazes++; s.pontos++; }
+      else if (t === 'defesa')         { s.defesas++; }
+      else if (t === 'erro_ataque')    { s.erros++; s.errosAtaque++; }
+      else if (t === 'erro_servico')   { s.erros++; s.errosServico++; }
     });
 
     setStats(newStats);
   };
 
   const registarAcao = async (atletaId, tipo) => {
-    const atleta = atletas.find((a) => a.id === atletaId);
+    const atleta = atletas.find(a => a.id === atletaId);
     if (!atleta) return;
 
     try {
       const acao = {
-        jogoId,
-        atletaId,
-        atletaNome: atleta.nome,
-        tipo,
-        set: setAtual,
-        timestamp: Timestamp.now(),
+        jogoId, atletaId, atletaNome: atleta.nome,
+        tipo, set: setAtual, timestamp: Timestamp.now(),
       };
 
-      const docRef = await addDoc(collection(db, 'acoes_jogo'), acao);
+      const docRef = await addDoc(collection(db, `clubs/${clubId}/acoes_jogo`), acao); // ← NOVO
       const novoHistorico = [{ id: docRef.id, ...acao }, ...historico];
       setHistorico(novoHistorico);
 
-      // Atualizar stats
       const newStats = { ...stats };
-      
-      if (tipo === 'ataque_ponto') {
-        newStats[atletaId].ataques += 1;
-        newStats[atletaId].ataquesEficazes += 1;
-        newStats[atletaId].pontos += 1;
-      } else if (tipo === 'ataque_continuidade') {
-        newStats[atletaId].ataques += 1;
-      } else if (tipo === 'ataque_erro') {
-        newStats[atletaId].ataques += 1;
-        newStats[atletaId].erros += 1;
-        newStats[atletaId].errosAtaque += 1;
-      } else if (tipo === 'servico_ace') {
-        newStats[atletaId].aces += 1;
-        newStats[atletaId].pontos += 1;
-      } else if (tipo === 'servico_erro') {
-        newStats[atletaId].erros += 1;
-        newStats[atletaId].errosServico += 1;
-      } else if (tipo === 'bloco_ponto') {
-        newStats[atletaId].bloqueios += 1;
-        newStats[atletaId].pontos += 1;
-      } else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') {
-        newStats[atletaId].defesas += 1;
-      }
-
+      const s = newStats[atletaId];
+      if (tipo === 'ataque_ponto')        { s.ataques++; s.ataquesEficazes++; s.pontos++; }
+      else if (tipo === 'ataque_continuidade') { s.ataques++; }
+      else if (tipo === 'ataque_erro')    { s.ataques++; s.erros++; s.errosAtaque++; }
+      else if (tipo === 'servico_ace')    { s.aces++; s.pontos++; }
+      else if (tipo === 'servico_erro')   { s.erros++; s.errosServico++; }
+      else if (tipo === 'bloco_ponto')    { s.bloqueios++; s.pontos++; }
+      else if (tipo === 'defesa_boa' || tipo === 'defesa_tocou') { s.defesas++; }
       setStats(newStats);
 
-      // Atualizar resultado do set atual
       const novosResultados = { ...resultadosPorSet };
       if (['ataque_ponto', 'servico_ace', 'bloco_ponto'].includes(tipo)) {
         novosResultados[setAtual].nos++;
       }
-
       setResultadosPorSet(novosResultados);
-      
-      // Guardar no Firestore
-      await updateDoc(doc(db, 'jogos', jogoId), {
+
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
         resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
@@ -296,29 +205,21 @@ export function useJogoLive(jogoId) {
   const registarAcaoGeral = async (tipo) => {
     try {
       const acao = {
-        jogoId,
-        atletaId: null,
+        jogoId, atletaId: null,
         atletaNome: tipo === 'erro_adversario' ? 'Adversário' : 'Equipa',
-        tipo,
-        set: setAtual,
-        timestamp: Timestamp.now(),
+        tipo, set: setAtual, timestamp: Timestamp.now(),
       };
 
-      const docRef = await addDoc(collection(db, 'acoes_jogo'), acao);
+      const docRef = await addDoc(collection(db, `clubs/${clubId}/acoes_jogo`), acao); // ← NOVO
       const novoHistorico = [{ id: docRef.id, ...acao }, ...historico];
       setHistorico(novoHistorico);
 
       const novosResultados = { ...resultadosPorSet };
-
-      if (tipo === 'erro_adversario') {
-        novosResultados[setAtual].nos++;
-      } else if (tipo === 'ponto_adversario' || tipo === 'erro_equipa') {
-        novosResultados[setAtual].adversario++;
-      }
-
+      if (tipo === 'erro_adversario') novosResultados[setAtual].nos++;
+      else if (tipo === 'ponto_adversario' || tipo === 'erro_equipa') novosResultados[setAtual].adversario++;
       setResultadosPorSet(novosResultados);
 
-      await updateDoc(doc(db, 'jogos', jogoId), {
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
         resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
@@ -331,24 +232,18 @@ export function useJogoLive(jogoId) {
   };
 
   const desfazerUltima = async () => {
-    if (historico.length === 0) {
-      toast.error('Nada para desfazer');
-      return;
-    }
+    if (historico.length === 0) { toast.error('Nada para desfazer'); return; }
 
     try {
-      const ultima = historico[0];
-      await deleteDoc(doc(db, 'acoes_jogo', ultima.id));
+      await deleteDoc(doc(db, `clubs/${clubId}/acoes_jogo`, historico[0].id)); // ← NOVO
 
       const novoHistorico = historico.slice(1);
       setHistorico(novoHistorico);
       recalcularStats(novoHistorico);
       recalcularResultadosPorSet(novoHistorico);
 
-      // Atualizar Firestore
-      const novosResultados = { ...resultadosPorSet };
-      await updateDoc(doc(db, 'jogos', jogoId), {
-        resultadosPorSet: novosResultados,
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
+        resultadosPorSet: { ...resultadosPorSet },
         updatedAt: Timestamp.now(),
       });
 
@@ -361,28 +256,20 @@ export function useJogoLive(jogoId) {
 
   const toggleAtletaEmCampo = (atletaId) => {
     if (atletasEmCampo.includes(atletaId)) {
-      setAtletasEmCampo(atletasEmCampo.filter((id) => id !== atletaId));
+      setAtletasEmCampo(atletasEmCampo.filter(id => id !== atletaId));
     } else {
-      if (atletasEmCampo.length >= 7) {
-        toast.error('Máximo 7 atletas em campo');
-        return;
-      }
+      if (atletasEmCampo.length >= 7) { toast.error('Máximo 7 atletas em campo'); return; }
       setAtletasEmCampo([...atletasEmCampo, atletaId]);
     }
   };
 
   const atualizarResultadoSet = async (set, novoResultado) => {
     try {
-      const novosResultados = {
-        ...resultadosPorSet,
-        [set]: novoResultado,
-      };
-
-      await updateDoc(doc(db, 'jogos', jogoId), {
+      const novosResultados = { ...resultadosPorSet, [set]: novoResultado };
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
         resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
-
       setResultadosPorSet(novosResultados);
       toast.success('Resultado atualizado!');
     } catch (error) {
@@ -395,21 +282,14 @@ export function useJogoLive(jogoId) {
     try {
       const novosResultados = { ...resultadosPorSet };
       const novoValor = novosResultados[setAtual][equipa] + valor;
-      
-      if (novoValor < 0) {
-        toast.error('Pontuação não pode ser negativa');
-        return;
-      }
-
+      if (novoValor < 0) { toast.error('Pontuação não pode ser negativa'); return; }
       novosResultados[setAtual][equipa] = novoValor;
 
-      await updateDoc(doc(db, 'jogos', jogoId), {
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
         resultadosPorSet: novosResultados,
         updatedAt: Timestamp.now(),
       });
-
       setResultadosPorSet(novosResultados);
-      
       toast.success(valor > 0 ? '✓ +1' : '✓ -1', { duration: 500 });
     } catch (error) {
       console.error('Erro:', error);
@@ -424,40 +304,32 @@ export function useJogoLive(jogoId) {
 
   const finalizarJogo = async () => {
     if (!confirm('Finalizar jogo e guardar estatísticas?')) return;
-
     const loadingToast = toast.loading('A guardar...');
 
     try {
-      // Calcular resultado final (soma de sets ganhos)
       const setsGanhos = { nos: 0, adversario: 0 };
-      Object.values(resultadosPorSet).forEach((resultado) => {
+      Object.values(resultadosPorSet).forEach(resultado => {
         if (resultado.nos > resultado.adversario) setsGanhos.nos++;
         else if (resultado.adversario > resultado.nos) setsGanhos.adversario++;
       });
 
-      await updateDoc(doc(db, 'jogos', jogoId), {
+      await updateDoc(doc(db, `clubs/${clubId}/jogos`, jogoId), { // ← NOVO
         estado: 'finalizado',
-        resultadosPorSet: resultadosPorSet,
+        resultadosPorSet,
         resultado: setsGanhos,
         updatedAt: Timestamp.now(),
       });
 
       const batch = writeBatch(db);
-
       Object.entries(stats).forEach(([atletaId, estatisticas]) => {
-        const atleta = atletas.find((a) => a.id === atletaId);
+        const atleta = atletas.find(a => a.id === atletaId);
         if (!atleta) return;
+        if (!Object.values(estatisticas).some(v => v > 0)) return;
 
-        const temStats = Object.values(estatisticas).some((v) => v > 0);
-        if (!temStats) return;
-
-        const docRef = doc(collection(db, 'estatisticas_jogo'));
+        const docRef = doc(collection(db, `clubs/${clubId}/estatisticas_jogo`)); // ← NOVO
         batch.set(docRef, {
-          jogoId,
-          atletaId,
-          atletaNome: atleta.nome,
-          equipa: jogo.equipa,
-          ...estatisticas,
+          jogoId, atletaId, atletaNome: atleta.nome,
+          equipa: jogo.equipa, ...estatisticas,
           titular: atletasEmCampo.includes(atletaId),
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
@@ -465,7 +337,6 @@ export function useJogoLive(jogoId) {
       });
 
       await batch.commit();
-
       toast.success('Jogo finalizado!', { id: loadingToast });
       navigate('/jogos');
     } catch (error) {
@@ -475,22 +346,10 @@ export function useJogoLive(jogoId) {
   };
 
   return {
-    jogo,
-    atletas,
-    loading,
-    historico,
-    setAtual,
-    setSetAtual: mudarSet,
-    atletasEmCampo,
-    resultadosPorSet,
-    resultadoSetAtual: resultadosPorSet[setAtual],
-    stats,
-    registarAcao,
-    registarAcaoGeral,
-    desfazerUltima,
-    toggleAtletaEmCampo,
-    atualizarResultadoSet,
-    adicionarPonto,
-    finalizarJogo,
+    jogo, atletas, loading, historico, setAtual,
+    setSetAtual: mudarSet, atletasEmCampo,
+    resultadosPorSet, resultadoSetAtual: resultadosPorSet[setAtual],
+    stats, registarAcao, registarAcaoGeral, desfazerUltima,
+    toggleAtletaEmCampo, atualizarResultadoSet, adicionarPonto, finalizarJogo,
   };
 }
