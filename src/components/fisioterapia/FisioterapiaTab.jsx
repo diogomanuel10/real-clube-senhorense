@@ -109,7 +109,7 @@ const FisioterapiaTab = ({ atleta, user }) => {
             const ref = collection(db, "episodiosClinicos", episodioId, "avaliacoes");
             const snap = await getDocs(query(ref, orderBy("data", "asc")));
             setAvaliacoes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            setEpisodioAvaliacoesLista(episodioId);
+            setEpisodioAvaliacoesLista(episodioId); // abre lista
         } catch (err) {
             console.error("Erro ao carregar avaliações:", err);
             alert("Erro ao carregar avaliações deste episódio.");
@@ -119,12 +119,55 @@ const FisioterapiaTab = ({ atleta, user }) => {
     };
 
 
+    const eliminarEpisodio = async (ep) => {
+        if (
+            !window.confirm(
+                "Eliminar este episódio clínico e todos os seus dados (sessões, avaliações)?"
+            )
+        ) {
+            return;
+        }
+
+        try {
+            // Referência ao episódio
+            const episodioRef = doc(db, "episodiosClinicos", ep.id);
+
+            // Opcional: apagar subcoleções (sessões, avaliações) antes
+            // Firestore não apaga subcoleções automaticamente
+            const sessoesRef = collection(db, "episodiosClinicos", ep.id, "sessoes");
+            const avaliacoesRef = collection(db, "episodiosClinicos", ep.id, "avaliacoes");
+
+            const sessoesSnap = await getDocs(sessoesRef);
+            const avaliacoesSnap = await getDocs(avaliacoesRef);
+
+            const batch = writeBatch(db);
+
+            sessoesSnap.forEach((d) => batch.delete(d.ref));
+            avaliacoesSnap.forEach((d) => batch.delete(d.ref));
+
+            batch.delete(episodioRef);
+
+            await batch.commit();
+
+            // Recarregar lista de episódios
+            await carregarEpisodios();
+        } catch (err) {
+            console.error("Erro ao eliminar episódio clínico:", err);
+            alert("Erro ao eliminar episódio clínico.");
+        }
+    };
+
     const guardarAvaliacao = async () => {
-        const episodioId = episodioModalAvaliacao;
+        const episodioId = episodioAvaliacoesAtivo;
         if (!episodioId) return;
 
         try {
-            const refAvaliacoes = collection(db, "episodiosClinicos", episodioId, "avaliacoes");
+            const refAvaliacoes = collection(
+                db,
+                "episodiosClinicos",
+                episodioId,
+                "avaliacoes"
+            );
 
             if (avaliacaoParaEditar) {
                 const docRef = doc(refAvaliacoes, avaliacaoParaEditar.id);
@@ -142,15 +185,44 @@ const FisioterapiaTab = ({ atleta, user }) => {
                 });
             }
 
-            await carregarAvaliacoes(episodioId);
-            setEpisodioModalAvaliacao(null);
+            // refresh da lista se estiver aberta
+            if (episodioAvaliacoesLista === episodioId) {
+                await carregarAvaliacoes(episodioId);
+            }
+
+            setEpisodioAvaliacoesAtivo(null);
             setAvaliacaoParaEditar(null);
             setAvaliacaoForm({ momento: "inicio", data: "", descricao: "" });
         } catch (err) {
             console.error("Erro ao guardar avaliação:", err);
-            alert("Erro ao guardar avaliação clínica");
+            alert("Erro ao guardar avaliação clínica.");
         }
     };
+
+    const eliminarAvaliacao = async (episodioId, avaliacaoId) => {
+        if (!window.confirm("Eliminar esta avaliação?")) return;
+
+        try {
+            const refAvaliacoes = collection(
+                db,
+                "episodiosClinicos",
+                episodioId,
+                "avaliacoes"
+            );
+            const docRef = doc(refAvaliacoes, avaliacaoId);
+            await deleteDoc(docRef);
+
+            // Se a lista deste episódio estiver aberta, faz refresh
+            if (episodioAvaliacoesLista === episodioId) {
+                await carregarAvaliacoes(episodioId);
+            }
+        } catch (err) {
+            console.error("Erro ao eliminar avaliação:", err);
+            alert("Erro ao eliminar avaliação clínica.");
+        }
+    };
+
+
 
 
     const fecharEpisodio = async (ep) => {
@@ -327,6 +399,16 @@ const FisioterapiaTab = ({ atleta, user }) => {
                                                 </button>
                                             )}
 
+                                            {user?.role === "fisio" && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => eliminarEpisodio(ep)}
+                                                    className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
+                                                >
+                                                    Eliminar episódio
+                                                </button>
+                                            )}
+
                                             <button
                                                 type="button"
                                                 onClick={() => carregarSessoes(ep.id)}
@@ -360,32 +442,32 @@ const FisioterapiaTab = ({ atleta, user }) => {
                                     {/* Avaliações do episódio */}
                                     <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[11px] sm:text-xs font-semibold text-slate-700">
+                                            <p className="text-11px sm:text-xs font-semibold text-slate-700">
                                                 Avaliações
                                             </p>
+
                                             <div className="flex items-center gap-2">
+                                                {/* Ver / Esconder avaliações */}
                                                 <button
                                                     type="button"
                                                     onClick={() => carregarAvaliacoes(ep.id)}
-                                                    className="text-[11px] sm:text-xs text-slate-700 underline"
+                                                    className="text-11px sm:text-xs text-slate-700 underline"
                                                 >
                                                     {episodioAvaliacoesLista === ep.id
                                                         ? "Esconder avaliações"
                                                         : "Ver avaliações"}
                                                 </button>
+
+                                                {/* Nova avaliação (só abre modal) */}
                                                 {podeEditar && (
                                                     <button
                                                         type="button"
                                                         onClick={() => {
                                                             setAvaliacaoParaEditar(null);
-                                                            setAvaliacaoForm({
-                                                                momento: "inicio",
-                                                                data: "",
-                                                                descricao: "",
-                                                            });
-                                                            setEpisodioAvaliacoesAtivo(ep.id);
+                                                            setAvaliacaoForm({ momento: "inicio", data: "", descricao: "" });
+                                                            setEpisodioAvaliacoesAtivo(ep.id); // só modal
                                                         }}
-                                                        className="text-[11px] sm:text-xs text-blue-700 underline"
+                                                        className="text-11px sm:text-xs text-blue-700 underline"
                                                     >
                                                         Nova avaliação
                                                     </button>
@@ -393,21 +475,20 @@ const FisioterapiaTab = ({ atleta, user }) => {
                                             </div>
                                         </div>
 
-                                        {episodioAvaliacoesAtivo === ep.id && (
+                                        {/* LISTA: depende APENAS de episodioAvaliacoesLista */}
+                                        {episodioAvaliacoesLista === ep.id && (
                                             <div className="space-y-2 mt-1">
                                                 {loadingAvaliacoes ? (
-                                                    <p className="text-[11px] text-slate-500">
-                                                        A carregar avaliações...
-                                                    </p>
+                                                    <p className="text-11px text-slate-500">A carregar avaliações...</p>
                                                 ) : avaliacoes.length === 0 ? (
-                                                    <p className="text-[11px] text-slate-500">
+                                                    <p className="text-11px text-slate-500">
                                                         Ainda não existem avaliações registadas.
                                                     </p>
                                                 ) : (
                                                     avaliacoes.map((av) => (
                                                         <div
                                                             key={av.id}
-                                                            className="text-[11px] sm:text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2 flex justify-between gap-3"
+                                                            className="text-11px sm:text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2 flex justify-between gap-3"
                                                         >
                                                             <div>
                                                                 <p className="font-semibold">
@@ -416,29 +497,36 @@ const FisioterapiaTab = ({ atleta, user }) => {
                                                                         : av.momento === "intermedio"
                                                                             ? "Intermédio"
                                                                             : "Fim"}{" "}
-                                                                    • {av.data || "-"}
+                                                                    - {av.data || "Sem data"}
                                                                 </p>
-                                                                {av.descricao && (
-                                                                    <p className="mt-1 leading-snug">{av.descricao}</p>
-                                                                )}
+                                                                <p className="mt-1 leading-snug">{av.descricao}</p>
                                                             </div>
 
                                                             {podeEditar && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setAvaliacaoParaEditar(av);
-                                                                        setAvaliacaoForm({
-                                                                            momento: av.momento || "inicio",
-                                                                            data: av.data || "",
-                                                                            descricao: av.descricao || "",
-                                                                        });
-                                                                        setEpisodioAvaliacoesAtivo(ep.id);
-                                                                    }}
-                                                                    className="self-start text-[11px] text-blue-700 underline"
-                                                                >
-                                                                    Editar
-                                                                </button>
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setAvaliacaoParaEditar(av);
+                                                                            setAvaliacaoForm({
+                                                                                momento: av.momento || "inicio",
+                                                                                data: av.data || "",
+                                                                                descricao: av.descricao || "",
+                                                                            });
+                                                                            setEpisodioAvaliacoesAtivo(ep.id);
+                                                                        }}
+                                                                        className="text-11px text-blue-700 underline"
+                                                                    >
+                                                                        Editar
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => eliminarAvaliacao(ep.id, av.id)}
+                                                                        className="text-11px text-red-600 underline"
+                                                                    >
+                                                                        Eliminar
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     ))
@@ -446,6 +534,7 @@ const FisioterapiaTab = ({ atleta, user }) => {
                                             </div>
                                         )}
                                     </div>
+
 
                                     {episodioAtivo === ep.id && (
                                         <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
@@ -601,11 +690,12 @@ const FisioterapiaTab = ({ atleta, user }) => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => guardarAvaliacao(episodioAvaliacoesAtivo)}
+                                onClick={guardarAvaliacao}
                                 className="w-full sm:w-auto px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold"
                             >
                                 {avaliacaoParaEditar ? "Guardar alterações" : "Guardar avaliação"}
                             </button>
+
                         </div>
                     </div>
                 </div>

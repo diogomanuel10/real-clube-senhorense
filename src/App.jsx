@@ -29,6 +29,7 @@ import Avaliacoes from "./pages/AvaliacoesEquipa"
 import Comunicados from "./pages/Comunicados";
 import FirebaseMonitoring from './pages/FirebaseMonitoring';
 import Equipamentos from "./pages/Equipamentos";
+import SuperAdmin from "./pages/SuperAdmin"
 
 import "./styles/globals.css";
 
@@ -55,6 +56,15 @@ function AppContent({ user }) {
             element={
               <DashboardLayout user={user}>
                 <Avaliacoes user={user} />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/superadmin"
+            element={
+              <DashboardLayout user={user}>
+                <SuperAdmin />
               </DashboardLayout>
             }
           />
@@ -91,8 +101,8 @@ function AppContent({ user }) {
             }
           />
 
-<Route path="/jogos/:jogoId/estatisticas" element={<DashboardLayout user={user}><JogoEstatisticas user={user} /></DashboardLayout>} />
-<Route path="/jogos/:jogoId/live" element={<DashboardLayout user={user}><JogoLive user={user} /></DashboardLayout>} />
+          <Route path="/jogos/:jogoId/estatisticas" element={<DashboardLayout user={user}><JogoEstatisticas user={user} /></DashboardLayout>} />
+          <Route path="/jogos/:jogoId/live" element={<DashboardLayout user={user}><JogoLive user={user} /></DashboardLayout>} />
           <Route
             path="/presencas"
             element={
@@ -158,7 +168,7 @@ function AppContent({ user }) {
 
           <Route
             path="/firebase-monitoring"
-            element={ <DashboardLayout user={user}><FirebaseMonitoring user={user} /></DashboardLayout>}
+            element={<DashboardLayout user={user}><FirebaseMonitoring user={user} /></DashboardLayout>}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />

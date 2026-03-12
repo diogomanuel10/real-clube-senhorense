@@ -12,14 +12,6 @@ export default function StatsCardsFisio({ stats, loading }) {
       subtitulo: 'A necessitar acompanhamento',
     },
     {
-      titulo: 'Atletas em Recuperação',
-      valor: stats?.atletasEmRecuperacao || 0,
-      icone: Users,
-      bg: 'bg-amber-50',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-    },
-    {
       titulo: 'Lesões Recuperadas',
       valor: stats?.lesoesRecuperadas || 0,
       icone: CheckCircle,
@@ -73,7 +65,7 @@ export default function StatsCardsFisio({ stats, loading }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
       {cards.map((card, idx) => {
         const Icon = card.icone;
         return (

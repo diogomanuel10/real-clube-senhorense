@@ -1,6 +1,6 @@
 // DashboardLayout.jsx
 import { useState, useEffect } from "react";
-import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone, Dumbbell, Trophy } from "lucide-react";
+import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone, Dumbbell, Trophy} from "lucide-react";
 import { FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
 import { auth } from "../utils/firebase";
@@ -8,6 +8,7 @@ import { signOut } from "firebase/auth";
 const navItems = [
   // 1. Visão geral
   { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/", roles: ["admin", "treinador", "coordenador", "fisio"] },
+  {id:"superadmin",label:"Gestão de Clubes",icon: Users,path: "/superadmin", roles: ["superadmin"]},
 
   // 2. Gestão de pessoas (núcleo principal)
   { id: "atletas", label: "Atletas", icon: Users, path: "/atletas", roles: ["admin", "treinador", "coordenador", "fisio"] },

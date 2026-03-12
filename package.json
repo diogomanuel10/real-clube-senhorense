@@ -13,6 +13,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "firebase": "^10.14.1",
+    "firebase-admin": "^13.7.0",
     "lucide-react": "^0.404.0",
     "papaparse": "^5.5.3",
     "react": "^18.3.1",
@@ -31,5 +32,18 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "[![Firebase](https://img.shields.io/badge/Firebase-10.12.5-orange?logo=firebase)](https://firebase.google.com/) [![React](https://img.shields.io/badge/React-18.3.1-blue?logo=react)](https://reactjs.org/) [![Vite](https://img.shields.io/badge/Vite-5.4.1-646CFF?logo=vite)](https://vitejs.dev/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.19-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diogomanuel10/real-clube-senhorense.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/diogomanuel10/real-clube-senhorense/issues"
+  },
+  "homepage": "https://github.com/diogomanuel10/real-clube-senhorense#readme"
 }
