@@ -19,8 +19,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// ✅ Segunda app — só para criar utilizadores sem fazer logout
-export const appSecundaria = initializeApp(firebaseConfig, 'secondary');
+const appSecundaria = initializeApp(firebaseConfig, "appSecundaria");
 export const authSecundaria = getAuth(appSecundaria);
 
 export default app;

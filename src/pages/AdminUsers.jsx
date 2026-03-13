@@ -20,22 +20,31 @@ export default function AdminUsers({ user }) {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, "utilizadores"));
+      const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+      if (!clubeId) {
+        console.log('❌ Sem clubeId');
+        setLoading(false);
+        return;
+      }
+
+      console.log('🔍 Carregando utilizadores de:', clubeId);
+      const snap = await getDocs(collection(db, `clubs/${clubeId}/utilizadores`));
       const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setUtilizadores(lista);
     } catch (err) {
-      console.error("Erro ao carregar utilizadores:", err);
-      alert("Erro ao carregar utilizadores.");
+      console.error("Erro:", err);
     } finally {
       setLoading(false);
     }
   };
 
+
   useEffect(() => {
     loadUsers();
     const loadEscaloes = async () => {
       try {
-        const snap = await getDocs(collection(db, "escaloes"));
+        const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+        const snap = await getDocs(collection(db, `clubs/${clubeId}/escaloes`));
         const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setEscaloes(lista);
       } catch (err) {
@@ -55,22 +64,30 @@ export default function AdminUsers({ user }) {
     if (!editingUser) return;
     setSaving(true);
     try {
-      const ref = doc(db, "utilizadores", editingUser.id);
-      await updateDoc(ref, {
-        role: formRole || null,
-        equipas: formEquipas,
-      });
+      const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+
+      // 1. Atualiza ÍNDICE global
+      const refGlobal = doc(db, "utilizadores", editingUser.id);
+      await updateDoc(refGlobal, { role: formRole || null, equipas: formEquipas });
+
+      // 2. Atualiza SUBCOLEÇÃO clube
+      const refClube = doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id);
+      await updateDoc(refClube, { role: formRole || null, equipas: formEquipas });
+
+      await loadUsers();
+
+      // ✅ FECHA MODAL
       setEditingUser(null);
       setFormRole("");
       setFormEquipas([]);
-      await loadUsers();
+
     } catch (err) {
-      console.error("Erro ao guardar utilizador:", err);
-      alert("Erro ao guardar utilizador.");
+      console.error("Erro:", err);
     } finally {
       setSaving(false);
     }
   };
+
 
   return (
     <DashboardLayout user={user}>
@@ -85,7 +102,7 @@ export default function AdminUsers({ user }) {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0">
                   <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-[#f5c623]" />

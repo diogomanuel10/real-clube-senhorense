@@ -1,7 +1,7 @@
 // src/pages/Login.jsx
 import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDoc, doc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -23,12 +23,25 @@ export default function Login() {
     carregarClube(clubeParam);
   }, [clubeParam]);
 
-  const carregarClube = async (clubeId) => {
+  const carregarClube = async (slugOuId) => {
     setCarregandoClube(true);
     try {
-      const snap = await getDoc(doc(db, 'clubs', clubeId));
+      // 1º tenta como slug (doc root)
+      let snap = await getDoc(doc(db, 'clubs', slugOuId));
+
+      // 2º se não existir, procura por slug no campo
+      if (!snap.exists()) {
+        const q = query(
+          collection(db, "clubs"),
+          where("slug", "==", slugOuId)
+        );
+        const querySnap = await getDocs(q);
+        if (!querySnap.empty) snap = querySnap.docs[0];
+      }
+
       if (snap.exists()) {
         setClube({ id: snap.id, ...snap.data() });
+        localStorage.setItem('ultimoClube', snap.id);
       }
     } catch (err) {
       console.error('Erro ao carregar clube:', err);
@@ -36,6 +49,7 @@ export default function Login() {
       setCarregandoClube(false);
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,11 +60,11 @@ export default function Login() {
       navigate('/');
     } catch (error) {
       const msg =
-        error.code === 'auth/user-not-found'    ? 'Email não encontrado.' :
-        error.code === 'auth/wrong-password'     ? 'Password incorreta.' :
-        error.code === 'auth/invalid-credential' ? 'Email ou password incorretos.' :
-        error.code === 'auth/too-many-requests'  ? 'Demasiadas tentativas. Tenta mais tarde.' :
-        'Erro ao iniciar sessão. Tenta novamente.';
+        error.code === 'auth/user-not-found' ? 'Email não encontrado.' :
+          error.code === 'auth/wrong-password' ? 'Password incorreta.' :
+            error.code === 'auth/invalid-credential' ? 'Email ou password incorretos.' :
+              error.code === 'auth/too-many-requests' ? 'Demasiadas tentativas. Tenta mais tarde.' :
+                'Erro ao iniciar sessão. Tenta novamente.';
       setErro(msg);
     } finally {
       setLoading(false);
@@ -58,10 +72,10 @@ export default function Login() {
   };
 
   // Cores e branding dinâmicos — fallback genérico se não vier ?clube=
-  const corPrimaria    = clube?.branding?.corPrimaria || '#2563eb';
-  const corDestaque    = clube?.branding?.corDestaque || '#3b82f6';
+  const corPrimaria = clube?.branding?.corPrimaria || '#2563eb';
+  const corDestaque = clube?.branding?.corDestaque || '#3b82f6';
   const nomePlataforma = clube?.nome || 'ClubSide';
-  const logoUrl        = clube?.branding?.logoUrl || null;
+  const logoUrl = clube?.branding?.logoUrl || null;
 
   return (
     <div

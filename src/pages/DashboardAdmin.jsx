@@ -33,7 +33,7 @@ export default function DashboardAdmin({ user }) {
     metricasCaptacao, // NOVO
     loading,
     recarregar,
-  } = useDashboardAdmin();
+  } = useDashboardAdmin({ clubId: user.clubeId });;
 
   const [captacaoParaDetalhes, setCaptacaoParaDetalhes] = useState(null);
   const abrirCaptacaoModal = (captacao) => {

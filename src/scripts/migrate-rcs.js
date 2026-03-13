@@ -13,68 +13,42 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const clubId = 'senhorense';
+const clubId = 'KN05RGyYgnu7HuJwEFnV';  // ← O TEU DESTINO
 
 const collectionsToMigrate = [
-  'utilizadores',
-  'treinos',
-  'treinadores',
-  'presencas',
-  'planosTreino',
-  'jogos',
-  'exercicios',
-  'estatisticas_jogos',
-  'escaloes',
-  'episodiosClinicos',
-  'captacoes',
-  'avaliacoes_treino',
-  'atletas',
-  'acoes_jogo',
+  'utilizadores', 'treinos', 'treinadores', 'presencas', 'planosTreino',
+  'jogos', 'exercicios', 'estatisticas_jogos', 'escaloes', 
+  'episodiosClinicos', 'captacoes', 'avaliacoes_treino', 'atletas', 'acoes_jogo'
 ];
 
 async function migrateCollection(colName) {
-  console.log(`\n🟡 Migrando "${colName}"...`);
-  
+  console.log(`🟡 "${colName}"...`);
   const sourceSnap = await getDocs(collection(db, colName));
-  console.log(`  Encontrados ${sourceSnap.size} docs`);
+  if (sourceSnap.empty) return;
   
-  if (sourceSnap.empty) {
-    console.log(`  👻 "${colName}" vazia, pulando`);
-    return;
-  }
-
   let index = 0;
   while (index < sourceSnap.docs.length) {
     const batch = writeBatch(db);
     const slice = sourceSnap.docs.slice(index, index + 400);
-
-    slice.forEach((docSnap) => {
+    
+    slice.forEach(docSnap => {
       const data = docSnap.data();
       const newRef = doc(collection(db, `clubs/${clubId}/${colName}`), docSnap.id);
-      batch.set(newRef, {
-        ...data,
-        clubId,
-        migratedFrom: colName,
-      });
+      batch.set(newRef, { ...data, clubId });
     });
-
+    
     await batch.commit();
-    index += slice.length;
+    index += 400;
   }
-  
-  console.log(`  ✅ "${colName}" migrada (${sourceSnap.size} docs)`);
+  console.log(`✅ "${colName}"`);
 }
 
 async function migrateAll() {
-  console.log('🚀 INICIANDO MIGRAÇÃO SENHORENSE');
-  console.log('⚠️  ISTO SÓ COPIA, NÃO APAGA NADA');
-  
+  console.log(`🚀 KN05RGyYgnu7HuJwEFnV`);
   for (const colName of collectionsToMigrate) {
     await migrateCollection(colName);
   }
-  
-  console.log('\n🎉 MIGRAÇÃO CONCLUÍDA!');
-  console.log('Verifica no Firestore: clubs/senhorense/...');
+  console.log('🎉 TERMINADO!');
 }
 
-migrateAll().catch(console.error);
+migrateAll();

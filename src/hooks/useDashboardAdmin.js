@@ -3,8 +3,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import { useClub } from '../contexts/ClubContext';
 
-export function useDashboardAdmin() {
-  const { clubId } = useClub();
+export function useDashboardAdmin({ clubId } = {}) {
+  const userClubId = clubId || localStorage.getItem('ultimoClube');
 
   const [stats, setStats] = useState({
     totalAtletas: 0,

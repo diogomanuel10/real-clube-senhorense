@@ -1,7 +1,7 @@
 // src/hooks/useAuth.js
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../utils/firebase";
 
 export function useAuth() {
@@ -37,17 +37,23 @@ export function useAuth() {
           return;
         }
 
-        // 3. Ir buscar perfil completo na subcoleção do clube
-        const clubeId = indexData?.clubeId;
-        if (!clubeId) throw new Error("Utilizador sem clubeId");
+// 3. Ir buscar perfil completo na subcoleção do clube
+const clubeId = indexData?.clubeId;
+const urlClubeId = new URLSearchParams(window.location.search).get('clube') || 
+localStorage.getItem('ultimoClube');
 
-        const perfilSnap = await getDoc(
-          doc(db, `clubs/${clubeId}/utilizadores`, firebaseUser.uid)
-        );
+if (!clubeId && urlClubeId) {
+  localStorage.setItem('ultimoClube', urlClubeId);
+  await updateDoc(doc(db, "utilizadores", firebaseUser.uid), { clubeId: urlClubeId });
+  console.log('✅ Clube auto-detectado:', urlClubeId);
+  return; // ← SAI ANTES do perfil (reload automático)
+}
 
-        if (!perfilSnap.exists()) throw new Error("Perfil não encontrado no clube");
+if (!clubeId) throw new Error("Utilizador sem clubeId");
 
-        const perfil = perfilSnap.data();
+const perfilSnap = await getDoc(doc(db, `clubs/${clubeId}/utilizadores`, firebaseUser.uid));
+
+const perfil = perfilSnap.data(); // ← ESTA LINHA FALTAVA!
 
         setUser({
           uid: firebaseUser.uid,

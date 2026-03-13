@@ -25,7 +25,7 @@ export default function DashboardTreinador({ user }) {
     comunicados,
     loading,
     recarregar,
-  } = useDashboardTreinador(permissions.equipas);
+  } = useDashboardTreinador(permissions.equipas,{ clubId: user.clubeId });
 
   // Formatação da data
   const dataFormatada = new Date().toLocaleDateString('pt-PT', {
