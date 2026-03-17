@@ -6,42 +6,60 @@ import { usePermissions } from "../hooks/usePermissions";
 
 export default function AvaliacoesEquipaPage({ user }) {
 
-    const permissions = usePermissions(user);
-    const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
-    const equipasDoTreinador = permissions?.equipas || []; // ["Sub 21 F", "Seniores F"]
-    const [equipaSelecionada, setEquipaSelecionada] = useState(equipasDoTreinador[0] || null);
+  const permissions = usePermissions(user);
+  const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
+  const equipasDoTreinador = permissions?.equipas || []; // ["Sub 21 F", "Seniores F"]
+  const [equipaSelecionada, setEquipaSelecionada] = useState(equipasDoTreinador[0] || null);
+  const [paginaRanking, setPaginaRanking] = useState(1);
+  const [porPaginaRanking] = useState(5); // 5 por página
+  const [paginaAvaliacoes, setPaginaAvaliacoes] = useState(1);
+  const porPaginaAvaliacoes = 5;
 
-    useEffect(() => {
-  if (!equipaSelecionada && equipasDoTreinador.length > 0) {
-    setEquipaSelecionada(equipasDoTreinador[0]);
-  }
-}, [equipasDoTreinador, equipaSelecionada]);
+  useEffect(() => {
+    setPaginaAvaliacoes(1);
+  }, [equipaSelecionada]);
 
-    const { avaliacoes, loading: loadingAvaliacoes, atletasStats } =
-        useAvaliacoesEquipa(equipaSelecionada);
-    const { atletas, loading: loadingAtletas } =
-        useAtletasEquipa(equipaSelecionada);
+  useEffect(() => {
+    setPaginaRanking(1); // Reset quando muda equipa
+  }, [equipaSelecionada]);
+
+  useEffect(() => {
+    if (!equipaSelecionada && equipasDoTreinador.length > 0) {
+      setEquipaSelecionada(equipasDoTreinador[0]);
+      setPaginaRanking(1);
+    }
+  }, [equipasDoTreinador]);
+
+  const { avaliacoes, loading: loadingAvaliacoes, atletasStats } =
+    useAvaliacoesEquipa(equipaSelecionada);
+  const { atletas, loading: loadingAtletas } =
+    useAtletasEquipa(equipaSelecionada);
 
 
 
-    const topAtletas = Object.entries(atletasStats)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
-        .map(([id, pontos], index) => {
-            const atleta = atletas.find(a => a.id === id);
-            return {
-                id,
-                nome: atleta?.nome || 'Atleta sem nome', // 👈 Campo 'nome' da tua coleção
-                pontos,
-                posicao: index + 1
-            };
-        });
+  // Remove o .slice(0,10) do topAtletas e usa TODOS os ordenados
+  const topAtletas = Object.entries(atletasStats)
+    .sort(([, a], [, b]) => b - a)
+    .map(([id, pontos], index) => {
+      const atleta = atletas.find(a => a.id === id);
+      return {
+        id,
+        nome: atleta?.nome || 'Atleta sem nome',
+        pontos,
+        posicao: index + 1
+      };
+    });
 
-    // Média estrelas
-    const mediaEstrelas = avaliacoes.reduce((sum, a) => sum + a.estrelas, 0) / (avaliacoes.length || 1);
+  // Paginação
+  const totalPaginasRanking = Math.ceil(topAtletas.length / porPaginaRanking);
+  const inicioRanking = (paginaRanking - 1) * porPaginaRanking;
+  const topAtletasPagina = topAtletas.slice(inicioRanking, inicioRanking + porPaginaRanking);
 
-    return (
-       <>
+  // Média estrelas
+  const mediaEstrelas = avaliacoes.reduce((sum, a) => sum + a.estrelas, 0) / (avaliacoes.length || 1);
+
+  return (
+    <>
       <div className="space-y-8">
         {/* Selector equipa */}
         <div className="flex justify-end mb-4">
@@ -128,77 +146,190 @@ export default function AvaliacoesEquipaPage({ user }) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Ranking Atletas */}
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8">
-            <h2 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-              <Award className="w-8 h-8" />
-              Ranking Atletas
-            </h2>
-            <div className="space-y-3">
-              {topAtletas.map(({ id, nome, pontos, posicao }) => (
+          {/* Ranking Atletas - SEM SCROLL, SÓ PAGINAÇÃO */}
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 lg:p-8">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 lg:mb-8 pb-4 border-b border-slate-200">
+              <h2 className="text-xl lg:text-2xl font-black text-slate-900 flex items-center gap-2">
+                <Award className="w-7 h-7 lg:w-8 lg:h-8" />
+                Ranking Atletas
+              </h2>
+              <div className="hidden sm:block text-xs lg:text-sm text-slate-500 font-medium">
+                {topAtletas.length} atletas • Página {paginaRanking} de {totalPaginasRanking}
+              </div>
+            </div>
+
+            {/* Lista FIXA - 6 itens max (perfeita para 1 página) */}
+            <div className="space-y-3 mb-8">
+              {topAtletasPagina.map(({ id, nome, pontos, posicao }) => (
                 <div
                   key={id}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-2xl hover:shadow-md transition-all"
+                  className="group flex items-center gap-4 p-4 lg:p-5 bg-gradient-to-r from-slate-50/80 to-blue-50/50 hover:from-slate-100 hover:to-blue-100 border border-slate-200/50 hover:border-blue-200 hover:shadow-lg transition-all rounded-xl h-20 lg:h-22 flex-shrink-0"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-xl">
-                    #{posicao}
+                  {/* Medalha */}
+                  <div className={`w-12 h-12 lg:w-14 lg:h-14 flex items-center justify-center font-black text-xl lg:text-2xl shadow-lg flex-shrink-0 rounded-xl ${posicao === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white shadow-yellow-400/50' :
+                    posicao === 2 ? 'bg-gradient-to-br from-slate-400 to-slate-500 text-white shadow-slate-400/50' :
+                      posicao === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-orange-400/50' :
+                        'bg-gradient-to-br from-slate-200 to-slate-300 text-slate-800 shadow-sm'
+                    }`}>
+                    {posicao <= 3 ? ['🥇', '🥈', '🥉'][posicao - 1] : `#${posicao}`}
                   </div>
+
+                  {/* Nome */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-lg text-slate-900 capitalize truncate">
-                      Atleta {nome}
+                    <p className="font-bold text-base lg:text-lg text-slate-900 truncate pr-2 capitalize">
+                      {nome}
                     </p>
-                    <p className="text-sm text-slate-500">Total pontos</p>
+                    <p className="text-xs text-slate-500">Pontos acumulados</p>
                   </div>
+
+                  {/* Pontos */}
                   <div className="text-right">
-                    <div className="text-2xl font-black text-slate-900">{pontos}pts</div>
-                    <div className="text-xs text-emerald-600 font-bold">
-                      +{pontos * 10}%
+                    <div className="text-xl lg:text-2xl font-black bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1 rounded-xl shadow-lg">
+                      {pontos}pts
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Últimas Avaliações */}
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8">
-            <h2 className="text-2xl font-black text-slate-900 mb-6">Últimas Avaliações</h2>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {avaliacoes.slice(0, 5).map(av => (
+            {/* Paginação FULL WIDTH - SEMPRE VISÍVEL */}
+            <div className="pt-6 border-t border-slate-200">
+              <div className="flex items-center justify-center gap-2">
+                {/* Anterior */}
                 <button
-                  key={av.id}
-                  onClick={() => setAvaliacaoSelecionada(av)}
-                  className="w-full text-left p-5 border border-slate-200 rounded-2xl hover:shadow-md hover:border-blue-300 transition-all group"
+                  onClick={() => setPaginaRanking(p => Math.max(1, p - 1))}
+                  disabled={paginaRanking === 1}
+                  className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl border-2 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 flex items-center justify-center disabled:hover:shadow-md disabled:hover:translate-y-0 bg-white border-slate-200"
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex gap-1">
-                      {Array(5).fill().map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-5 h-5 ${
-                            i < av.estrelas
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-slate-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-bold text-slate-600 ml-auto">
-                      {av.createdAt.toLocaleDateString('pt-PT')}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-lg text-slate-900 mb-2">
-                    {av.positivos}
-                  </h4>
-                  {av.negativos && (
-                    <p className="text-sm text-slate-600 line-clamp-2">
-                      {av.negativos}
-                    </p>
-                  )}
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
-              ))}
+
+                {/* Páginas */}
+                <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50/80 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-inner">
+                  {Array.from({ length: totalPaginasRanking }, (_, i) => i + 1).map(pagina => (
+                    <button
+                      key={pagina}
+                      onClick={() => setPaginaRanking(pagina)}
+                      className={`w-10 h-10 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center ${paginaRanking === pagina
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-300/50 scale-105'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md hover:scale-[1.02]'
+                        }`}
+                    >
+                      {pagina}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Próxima */}
+                <button
+                  onClick={() => setPaginaRanking(p => Math.min(totalPaginasRanking, p + 1))}
+                  disabled={paginaRanking === totalPaginasRanking}
+                  className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl border-2 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 flex items-center justify-center disabled:hover:shadow-md disabled:hover:translate-y-0 bg-white border-slate-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
+
+
+          {/* Últimas Avaliações - COM PAGINAÇÃO */}
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 lg:p-8">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+              <h2 className="text-xl lg:text-2xl font-black text-slate-900 flex items-center gap-2">
+                <BarChart3 className="w-7 h-7 lg:w-8 lg:h-8" />
+                Últimas Avaliações
+              </h2>
+              <div className="text-xs lg:text-sm text-slate-500 font-medium">
+                {avaliacoes.length} total • Página {paginaAvaliacoes} de {Math.ceil(avaliacoes.length / porPaginaAvaliacoes)}
+              </div>
+            </div>
+
+            {/* Lista paginada - SEM SCROLL */}
+            <div className="space-y-3 mb-8">
+              {avaliacoes
+                .slice((paginaAvaliacoes - 1) * porPaginaAvaliacoes, paginaAvaliacoes * porPaginaAvaliacoes)
+                .map(av => (
+                  <button
+                    key={av.id}
+                    onClick={() => setAvaliacaoSelecionada(av)}
+                    className="group w-full p-3 lg:p-4 border border-slate-200 rounded-xl hover:shadow-md hover:border-blue-300 hover:bg-slate-50 transition-all h-18 lg:h-20 flex items-start gap-3 overflow-hidden">
+                    {/* Estrelas + Data */}
+                    <div className="flex flex-col items-start gap-1.5 flex-shrink-0 pt-1">
+                      <div className="flex gap-0.5">
+                        {Array(5).fill().map((_, i) => (
+                          <Star key={i} className={`w-4 h-4 ${i < av.estrelas ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`} />
+                        ))}
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium">
+                        {av.createdAt.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+
+                    {/* Conteúdo */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <h4 className="font-bold text-sm lg:text-base text-slate-900 line-clamp-2 leading-tight">
+                        {av.positivos}
+                      </h4>
+                      {av.negativos && (
+                        <p className="text-xs text-slate-600 line-clamp-1">⚠️ {av.negativos}</p>
+                      )}
+                    </div>
+                  </button>
+                ))
+              }
+            </div>
+
+            {/* Paginação igual ao ranking */}
+            {Math.ceil(avaliacoes.length / porPaginaAvaliacoes) > 1 && (
+              <div className="pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setPaginaAvaliacoes(p => Math.max(1, p - 1))}
+                    disabled={paginaAvaliacoes === 1}
+                    className="w-12 h-12 rounded-2xl border-2 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 flex items-center justify-center bg-white border-slate-200"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
+                    {Array.from({ length: Math.ceil(avaliacoes.length / porPaginaAvaliacoes) }, (_, i) => i + 1).map(pagina => (
+                      <button
+                        key={pagina}
+                        onClick={() => setPaginaAvaliacoes(pagina)}
+                        className={`w-10 h-10 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center ${paginaAvaliacoes === pagina
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-300/50 scale-105'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md'
+                          }`}
+                      >
+                        {pagina}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setPaginaAvaliacoes(p => Math.min(Math.ceil(avaliacoes.length / porPaginaAvaliacoes), p + 1))}
+                    disabled={paginaAvaliacoes === Math.ceil(avaliacoes.length / porPaginaAvaliacoes)}
+                    className="w-12 h-12 rounded-2xl border-2 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 flex items-center justify-center bg-white border-slate-200"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+
         </div>
       </div>
 
@@ -234,11 +365,10 @@ export default function AvaliacoesEquipaPage({ user }) {
                   {Array(5).fill().map((_, i) => (
                     <Star
                       key={i}
-                      className={`w-5 h-5 ${
-                        i < avaliacaoSelecionada.estrelas
-                          ? 'text-yellow-400 fill-yellow-400'
-                          : 'text-slate-300'
-                      }`}
+                      className={`w-5 h-5 ${i < avaliacaoSelecionada.estrelas
+                        ? 'text-yellow-400 fill-yellow-400'
+                        : 'text-slate-300'
+                        }`}
                     />
                   ))}
                   <span className="text-sm font-semibold text-slate-700 ml-2">
@@ -271,8 +401,8 @@ export default function AvaliacoesEquipaPage({ user }) {
         </>
       )}
     </>
-    );
+  );
 
-   
+
 
 }
