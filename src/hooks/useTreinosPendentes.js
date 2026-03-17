@@ -7,6 +7,7 @@ import { useClub } from '../contexts/ClubContext';
 
 export const useTreinosPendentes = (equipas) => {
   const { clubId } = useClub();
+  
   const [treinosPendentes, setTreinosPendentes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,6 +21,8 @@ export const useTreinosPendentes = (equipas) => {
 
     setLoading(true);
     setError(null);
+
+console.log(clubId)
 
     try {
       const treinosQueries = equipas.map(eq =>

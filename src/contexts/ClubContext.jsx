@@ -1,49 +1,79 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';  // ← ADICIONA
+import { auth, db } from '../utils/firebase';        // ← IMPORTA auth + db
 
-const ClubContext = createContext(null);
+// 1️⃣ DEFINE O CONTEXT PRIMEIRO
+export const ClubContext = createContext(null);
 
 export const ClubProvider = ({ children }) => {
-  const [clubId, setClubId] = useState('senhorense');
+  const [clubId, setClubId] = useState(null);
   const [clubConfig, setClubConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Tenta team_id da URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const teamIdFromUrl = urlParams.get('team_id');
-
-    // 2. Fallback hostname
-    const hostname = window.location.hostname;
-    const map = {
-      'rc-senhorense-voleibol.web.app': 'senhorense',
-      'real-clube-senhorense.pt': 'senhorense',
-      'localhost': 'senhorense',
-      'localhost:3000': 'senhorense',
-      'demo.clubside.pt': 'demo',
-    };
-
-    const detected = teamIdFromUrl || map[hostname] || 'senhorense';
-    setClubId(detected);
-
-    // 3. Carrega config do clube do Firestore
-    const loadConfig = async () => {
-      try {
-        const configRef = doc(db, `clubs/${detected}/config`, 'config');
-        const configSnap = await getDoc(configRef);
-        if (configSnap.exists()) {
-          setClubConfig({ id: detected, ...configSnap.data() });
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          console.log(user.uid)
+          // PRIORIDADE 1: User profile
+          const userDoc = await getDoc(doc(db, `utilizadores/${user.uid}`));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log(userData)
+            if (userData.clubeId) {
+              console.log('✅ ClubId do USER:', userData.clubeId);
+              setClubId(userData.clubeId);
+              loadConfig(userData.clubeId);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Erro user clubId:', err);
         }
-      } catch (err) {
-        console.error('Erro ao carregar config do clube:', err);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    loadConfig();
+      // PRIORIDADE 2: URL param ?team_id=
+      const urlParams = new URLSearchParams(window.location.search);
+      const teamIdFromUrl = urlParams.get('team_id');
+      if (teamIdFromUrl) {
+        console.log('🔗 ClubId da URL:', teamIdFromUrl);
+        setClubId(teamIdFromUrl);
+        loadConfig(teamIdFromUrl);
+        return;
+      }
+
+      // PRIORIDADE 3: Hostname
+      const hostname = window.location.hostname;
+      const map = {
+        'rc-senhorense-voleibol.web.app': 'senhorense',
+        'real-clube-senhorense.pt': 'senhorense',
+        'stamp.clubsidesite.pt': 'stamp',
+        'localhost': 'senhorense',
+        'demo.clubside.pt': 'demo',
+      };
+      const detected = map[hostname] || 'senhorense';
+      console.log('🌐 ClubId hostname:', detected);
+      setClubId(detected);
+      loadConfig(detected);
+    });
+
+    return unsubscribe;
   }, []);
+
+  const loadConfig = async (clubIdToLoad) => {
+    try {
+      const configRef = doc(db, `clubs/${clubIdToLoad}/config`, 'config');
+      const configSnap = await getDoc(configRef);
+      if (configSnap.exists()) {
+        setClubConfig({ id: clubIdToLoad, ...configSnap.data() });
+      }
+    } catch (err) {
+      console.error('Erro config:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ClubContext.Provider value={{ clubId, clubConfig, loading }}>
@@ -52,7 +82,6 @@ export const ClubProvider = ({ children }) => {
   );
 };
 
-// Hook para usar em qualquer componente
 export const useClub = () => {
   const context = useContext(ClubContext);
   if (!context) throw new Error('useClub deve ser usado dentro de ClubProvider');
