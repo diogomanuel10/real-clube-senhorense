@@ -63,10 +63,11 @@ export const ClubProvider = ({ children }) => {
 
   const loadConfig = async (clubIdToLoad) => {
     try {
-      const configRef = doc(db, `clubs/${clubIdToLoad}/config`, 'config');
+      const configRef = doc(db, `clubs/${clubIdToLoad}/config`, 'geral');
       const configSnap = await getDoc(configRef);
       if (configSnap.exists()) {
         setClubConfig({ id: clubIdToLoad, ...configSnap.data() });
+        applyClubTheme(config);
       }
     } catch (err) {
       console.error('Erro config:', err);
@@ -81,6 +82,20 @@ export const ClubProvider = ({ children }) => {
     </ClubContext.Provider>
   );
 };
+
+function applyClubTheme(config) {
+  if (!config) return;
+  const root = document.documentElement;
+
+  const corPrimaria = config.corPrimaria || '#0b1635';
+  const corDestaque = config.corDestaque || '#f5c623';
+
+  root.style.setProperty('--cor-primaria', corPrimaria);
+  root.style.setProperty('--cor-destaque', corDestaque);
+  root.style.setProperty('--cor-primaria-light', corPrimaria + '22'); // 13% opacity
+  root.style.setProperty('--cor-destaque-light', corDestaque + '33'); // 20% opacity
+}
+
 
 export const useClub = () => {
   const context = useContext(ClubContext);

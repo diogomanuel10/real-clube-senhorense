@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { addDoc, updateDoc, doc, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { X, Wrench, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
-import { useClub } from '../contexts/ClubContext';
+
 
 const ManutencaoModal = ({ equipamento, onClose, onSave }) => {
-  const { clubId } = useClub();
+
   const [formData, setFormData] = useState({
     tipo: 'preventiva',
     descricao: '',
@@ -45,7 +45,7 @@ const ManutencaoModal = ({ equipamento, onClose, onSave }) => {
 
     try {
       // Registar manutenção
-      await addDoc(collection(db,'clubs', clubId, 'manutencoes'), {
+      await addDoc(collection(db, 'manutencoes'), {
         equipamentoId: equipamento.id,
         equipamentoNome: equipamento.nome,
         tipo: formData.tipo,
@@ -62,7 +62,7 @@ const ManutencaoModal = ({ equipamento, onClose, onSave }) => {
 
       // Atualizar estado do equipamento se necessário
       if (formData.mudarEstado) {
-        await updateDoc(doc(db,'clubs', clubId, 'equipamentos', equipamento.id), {
+        await updateDoc(doc(db, 'equipamentos', equipamento.id), {
           estado: 'manutencao',
           atualizadoEm: new Date().toISOString()
         });

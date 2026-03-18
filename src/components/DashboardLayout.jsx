@@ -43,20 +43,22 @@ export default function DashboardLayout({ children, user }) {
 
   const carregarConfigClube = async (clubeId) => {
     try {
-      const snap = await getDoc(doc(db, "clubs", clubeId));
+      const snap = await getDoc(doc(db, "clubs", clubeId, "config", "geral")); // ← config/geral
       if (snap.exists()) setConfigClube({ id: snap.id, ...snap.data() });
     } catch (err) {
       console.error("Erro ao carregar config do clube:", err);
     }
   };
 
-  // Branding dinâmico — fallback para Senhorense enquanto migras
-  const corPrimaria = configClube?.branding?.corPrimaria || "#0b1635";
-  const corDestaque = configClube?.branding?.corDestaque || "#f5c623";
+
+
+  const corPrimaria = configClube?.corPrimaria || "#0b1635";
+  const corDestaque = configClube?.corDestaque || "#f5c623";
   const nomeClube = configClube?.nome || "ClubSide";
-  const lema = configClube?.branding?.lema || "";
-  const epoca = configClube?.epoca || "";
-  const logoUrl = configClube?.branding?.logoUrl || "/logo.png";
+  const logoUrl = configClube?.logoUrl || "/logo.png";
+  const lema = configClube?.lema || "";
+  const epoca = configClube?.epoca || "25/26";
+
 
   const handleLogout = async () => {
     try {

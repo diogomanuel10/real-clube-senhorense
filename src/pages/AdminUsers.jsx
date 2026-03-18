@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import DashboardLayout from "../components/DashboardLayout";
-import { Users, Shield, Edit3, ChevronLeft } from "lucide-react";
+import { Users, Shield, Edit3, ChevronLeft, UserPlus, Copy, Check, Link } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClub } from '../contexts/ClubContext';
+import { auth } from '../utils/firebase';
 
-const ROLES = ["admin", "treinador", "fisio", "direcao", "atleta", "preparador"];
+
+const ROLES = ["admin", "coordenador", "treinador", "fisio", "direcao", "atleta", "preparador"];
 
 export default function AdminUsers({ user }) {
   const { clubId } = useClub();
@@ -19,20 +21,20 @@ export default function AdminUsers({ user }) {
   const [saving, setSaving] = useState(false);
   const [escaloes, setEscaloes] = useState([]);
 
+  // ── Convite ──
+  const [modalConvite, setModalConvite] = useState(false);
+  const [conviteRole, setConviteRole] = useState("treinador");
+  const [gerandoConvite, setGerandoConvite] = useState(false);
+  const [linkGerado, setLinkGerado] = useState(null);
+  const [copiado, setCopiado] = useState(false);
+
   const loadUsers = async () => {
     setLoading(true);
     try {
       const clubeId = user.clubeId || clubId;
-      if (!clubeId) {
-        console.log('❌ Sem clubeId');
-        setLoading(false);
-        return;
-      }
-
-      console.log('🔍 Carregando utilizadores de:', clubeId);
+      if (!clubeId) { setLoading(false); return; }
       const snap = await getDocs(collection(db, `clubs/${clubeId}/utilizadores`));
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setUtilizadores(lista);
+      setUtilizadores(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error("Erro:", err);
     } finally {
@@ -40,6 +42,11 @@ export default function AdminUsers({ user }) {
     }
   };
 
+  useEffect(() => {
+  if (user && user.role !== "admin") {
+    navigate("/");
+  }
+}, [user]);
 
   useEffect(() => {
     loadUsers();
@@ -47,8 +54,7 @@ export default function AdminUsers({ user }) {
       try {
         const clubeId = user.clubeId || clubId;
         const snap = await getDocs(collection(db, `clubs/${clubeId}/escaloes`));
-        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setEscaloes(lista);
+        setEscaloes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Erro ao carregar escalões:", err);
       }
@@ -67,22 +73,12 @@ export default function AdminUsers({ user }) {
     setSaving(true);
     try {
       const clubeId = user.clubeId || clubId;
-
-      // 1. Atualiza ÍNDICE global
-      const refGlobal = doc(db, "utilizadores", editingUser.id);
-      await updateDoc(refGlobal, { role: formRole || null, equipas: formEquipas });
-
-      // 2. Atualiza SUBCOLEÇÃO clube
-      const refClube = doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id);
-      await updateDoc(refClube, { role: formRole || null, equipas: formEquipas });
-
+      await updateDoc(doc(db, "utilizadores", editingUser.id), { role: formRole || null, equipas: formEquipas });
+      await updateDoc(doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id), { role: formRole || null, equipas: formEquipas });
       await loadUsers();
-
-      // ✅ FECHA MODAL
       setEditingUser(null);
       setFormRole("");
       setFormEquipas([]);
-
     } catch (err) {
       console.error("Erro:", err);
     } finally {
@@ -90,139 +86,157 @@ export default function AdminUsers({ user }) {
     }
   };
 
+  // ── Gerar convite ──
+  const gerarConvite = async () => {
+    if (!conviteRole) return;
+    setGerandoConvite(true);
+    try {
+      const clubeId = user.clubeId || clubId;
+
+      // Token aleatório
+      const token = crypto.randomUUID().replace(/-/g, '').substring(0, 24);
+
+      // Expira em 7 dias
+      const expiraEm = new Date();
+      expiraEm.setDate(expiraEm.getDate() + 7);
+
+      await setDoc(doc(db, `clubs/${clubeId}/convites`, token), {
+        role: conviteRole,
+        clubeId,
+        usado: false,
+        criadoPor: auth.currentUser?.uid || null,
+        criadoEm: new Date().toISOString(),
+        expiraEm: expiraEm.toISOString(),
+      });
+
+      const link = `${window.location.origin}/convite?token=${token}&clube=${clubeId}`;
+      setLinkGerado(link);
+    } catch (err) {
+      console.error("Erro ao gerar convite:", err);
+    } finally {
+      setGerandoConvite(false);
+    }
+  };
+
+  const copiarLink = async () => {
+    if (!linkGerado) return;
+    await navigator.clipboard.writeText(linkGerado);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2500);
+  };
+
+  const fecharModalConvite = () => {
+    setModalConvite(false);
+    setLinkGerado(null);
+    setConviteRole("treinador");
+    setCopiado(false);
+  };
 
   return (
     <DashboardLayout user={user}>
       <div className="min-h-screen bg-gray-50">
-        {/* HEADER RESPONSIVO */}
+
+        {/* HEADER */}
         <header className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
           <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                onClick={() => navigate("/")}
-                className="p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100"
-              >
+              <button onClick={() => navigate("/")} className="p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0">
                   <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-[#f5c623]" />
                 </div>
                 <div>
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-                    Gestão de Utilizadores
-                  </h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-slate-900">Gestão de Utilizadores</h1>
                   <p className="text-xs sm:text-sm text-slate-500">
                     {utilizadores.length} utilizador{utilizadores.length !== 1 ? 'es' : ''} registado{utilizadores.length !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* ── BOTÃO GERAR CONVITE ── */}
+            <button
+              onClick={() => setModalConvite(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-md hover:brightness-110 transition-all"
+              style={{ backgroundColor: '#0b1635' }}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Gerar Convite</span>
+            </button>
           </div>
         </header>
 
         {/* MAIN */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          {/* CARD DE UTILIZADORES */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200">
-            {/* Header da tabela */}
             <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Utilizadores</span>
-              <span className="sm:hidden">Users</span>
+              <span>Utilizadores</span>
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-10 sm:py-12 text-sm text-slate-500">
+              <div className="flex items-center justify-center py-12 text-sm text-slate-500">
                 <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mr-2" />
                 A carregar...
               </div>
             ) : utilizadores.length === 0 ? (
-              <div className="px-4 sm:px-6 py-8 sm:py-10 text-center text-sm text-slate-500">
-                <Users className="w-12 h-12 sm:w-16 sm:h-16 text-slate-300 mx-auto mb-3" />
+              <div className="px-6 py-10 text-center text-sm text-slate-500">
+                <Users className="w-16 h-16 text-slate-300 mx-auto mb-3" />
                 <p className="font-medium text-slate-700 mb-1">Nenhum utilizador</p>
-                <p className="text-xs sm:text-sm">Ainda não existem utilizadores registados.</p>
+                <p className="text-xs">Gera um convite para adicionar o primeiro utilizador.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
                 {utilizadores.map((u) => (
-                  <div
-                    key={u.id}
-                    className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-slate-50 transition"
-                  >
-                    {/* LAYOUT MOBILE - Stack vertical */}
+                  <div key={u.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-slate-50 transition">
+                    {/* Mobile */}
                     <div className="flex flex-col gap-3 sm:hidden">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">
                           {u.nome?.charAt(0) || "?"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {u.nome || "Sem nome"}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {u.email || "Sem email"}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-900 truncate">{u.nome || "Sem nome"}</p>
+                          <p className="text-xs text-slate-500 truncate">{u.email || "Sem email"}</p>
                         </div>
                       </div>
-
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex flex-wrap gap-2 flex-1">
-                          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                            {u.role || "Sem role"}
-                          </span>
-                          {u.equipas && u.equipas.length > 0 && (
+                          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">{u.role || "Sem role"}</span>
+                          {u.equipas?.length > 0 && (
                             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-xs text-emerald-800">
                               {u.equipas.length} equipa{u.equipas.length > 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => openEdit(u)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-100 flex-shrink-0"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Editar
+                        <button onClick={() => openEdit(u)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-100 flex-shrink-0">
+                          <Edit3 className="w-3.5 h-3.5" /> Editar
                         </button>
                       </div>
                     </div>
 
-                    {/* LAYOUT DESKTOP - Horizontal */}
+                    {/* Desktop */}
                     <div className="hidden sm:flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
                           {u.nome?.charAt(0) || "?"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {u.nome || "Sem nome"}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {u.email || "Sem email"}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-900 truncate">{u.nome || "Sem nome"}</p>
+                          <p className="text-xs text-slate-500 truncate">{u.email || "Sem email"}</p>
                         </div>
                       </div>
-
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                          {u.role || "Sem role"}
-                        </span>
-                        {u.equipas && u.equipas.length > 0 && (
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">{u.role || "Sem role"}</span>
+                        {u.equipas?.length > 0 && (
                           <span className="px-3 py-1 rounded-full bg-emerald-50 text-xs text-emerald-800 whitespace-nowrap">
                             {u.equipas.join(", ")}
                           </span>
                         )}
-
-                        <button
-                          type="button"
-                          onClick={() => openEdit(u)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                          Editar
+                        <button onClick={() => openEdit(u)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100">
+                          <Edit3 className="w-3 h-3" /> Editar
                         </button>
                       </div>
                     </div>
@@ -233,86 +247,142 @@ export default function AdminUsers({ user }) {
           </div>
         </main>
 
-        {/* MODAL EDITAR - RESPONSIVO */}
+        {/* ── MODAL CONVITE ── */}
+        {modalConvite && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={fecharModalConvite}>
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between" style={{ backgroundColor: '#0b1635' }}>
+                <div className="flex items-center gap-3 text-white">
+                  <Link className="w-5 h-5 text-[#f5c623]" />
+                  <div>
+                    <p className="text-sm font-semibold">Gerar Link de Convite</p>
+                    <p className="text-xs text-slate-300">Válido por 7 dias · uso único</p>
+                  </div>
+                </div>
+                <button onClick={fecharModalConvite} className="text-slate-300 hover:text-white p-1.5 rounded-full hover:bg-white/10">✕</button>
+              </div>
+
+              {/* Conteúdo */}
+              <div className="p-6 space-y-5">
+                {!linkGerado ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Qual o perfil do utilizador convidado?
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {ROLES.map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => setConviteRole(r)}
+                            className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all capitalize ${
+                              conviteRole === r
+                                ? 'border-[#0b1635] bg-[#0b1635] text-white'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={gerarConvite}
+                      disabled={gerandoConvite || !conviteRole}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      style={{ backgroundColor: '#f5c623', color: '#0b1635' }}
+                    >
+                      {gerandoConvite ? (
+                        <><div className="w-4 h-4 border-2 border-[#0b1635] border-t-transparent rounded-full animate-spin" /> A gerar...</>
+                      ) : (
+                        <><UserPlus className="w-4 h-4" /> Gerar Link de Convite</>
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Link gerado */}
+                    <div className="text-center">
+                      <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                        <Check className="w-7 h-7 text-green-600" />
+                      </div>
+                      <p className="font-bold text-slate-800 text-base">Convite gerado!</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Role: <span className="font-semibold text-slate-700 capitalize">{conviteRole}</span> · expira em 7 dias
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                      <p className="text-xs text-slate-500 mb-1 font-medium">Link de convite:</p>
+                      <p className="text-xs text-slate-700 break-all font-mono leading-relaxed">{linkGerado}</p>
+                    </div>
+
+                    <button
+                      onClick={copiarLink}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                      style={{ backgroundColor: copiado ? '#16a34a' : '#f5c623', color: copiado ? 'white' : '#0b1635' }}
+                    >
+                      {copiado ? (
+                        <><Check className="w-4 h-4" /> Copiado!</>
+                      ) : (
+                        <><Copy className="w-4 h-4" /> Copiar Link</>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => { setLinkGerado(null); setConviteRole("treinador"); }}
+                      className="w-full py-2 rounded-xl text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      Gerar outro convite
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL EDITAR */}
         {editingUser && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50"
-            onClick={() => setEditingUser(null)}
-          >
-            <div
-              className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header do modal */}
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setEditingUser(null)}>
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between flex-shrink-0">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">Editar Utilizador</p>
-                  <p className="text-xs text-slate-300 truncate">
-                    {editingUser.nome} · {editingUser.email}
-                  </p>
+                  <p className="text-xs text-slate-300 truncate">{editingUser.nome} · {editingUser.email}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 ml-2 flex-shrink-0"
-                >
-                  ✕
-                </button>
+                <button onClick={() => setEditingUser(null)} className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 ml-2 flex-shrink-0">✕</button>
               </div>
 
-              {/* Conteúdo do modal - Scrollable */}
               <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Perfil / Role
-                  </label>
-                  <select
-                    value={formRole}
-                    onChange={(e) => setFormRole(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
-                  >
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Perfil / Role</label>
+                  <select value={formRole} onChange={(e) => setFormRole(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent">
                     <option value="">Selecione um perfil</option>
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
+                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Equipas que pode gerir
-                  </label>
-
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Equipas que pode gerir</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3">
                     {escaloes.length === 0 ? (
-                      <p className="text-xs text-slate-400 col-span-2 text-center py-4">
-                        Nenhum escalão disponível
-                      </p>
+                      <p className="text-xs text-slate-400 col-span-2 text-center py-4">Nenhum escalão disponível</p>
                     ) : (
                       escaloes.map((esc) => {
                         const nomeEquipa = esc.nome || esc.id;
                         const selecionado = formEquipas.includes(nomeEquipa);
-
                         return (
-                          <label
-                            key={esc.id}
-                            className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-50 p-1.5 rounded transition"
-                          >
+                          <label key={esc.id} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-50 p-1.5 rounded transition">
                             <input
                               type="checkbox"
                               checked={selecionado}
                               onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormEquipas((prev) =>
-                                    Array.from(new Set([...prev, nomeEquipa]))
-                                  );
-                                } else {
-                                  setFormEquipas((prev) =>
-                                    prev.filter((eq) => eq !== nomeEquipa)
-                                  );
-                                }
+                                if (e.target.checked) setFormEquipas((prev) => Array.from(new Set([...prev, nomeEquipa])));
+                                else setFormEquipas((prev) => prev.filter((eq) => eq !== nomeEquipa));
                               }}
                               className="rounded border-slate-300 text-[#0b1635] focus:ring-[#f5c623]"
                             />
@@ -325,21 +395,9 @@ export default function AdminUsers({ user }) {
                 </div>
               </div>
 
-              {/* Footer do modal */}
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleSave}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#f5c623] hover:bg-[#e0b91f] text-[#0b1635] text-sm font-semibold disabled:opacity-60"
-                >
+                <button onClick={() => setEditingUser(null)} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100">Cancelar</button>
+                <button disabled={saving} onClick={handleSave} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#f5c623] hover:bg-[#e0b91f] text-[#0b1635] text-sm font-semibold disabled:opacity-60">
                   {saving ? "A guardar..." : "Guardar alterações"}
                 </button>
               </div>
