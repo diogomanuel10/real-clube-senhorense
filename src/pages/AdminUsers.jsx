@@ -13,6 +13,8 @@ export default function AdminUsers({ user }) {
   const navigate = useNavigate();
   const [utilizadores, setUtilizadores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [formNome, setFormNome] = useState("");
+  const [formEmail, setFormEmail] = useState("");
   const [editingUser, setEditingUser] = useState(null);
   const [formRole, setFormRole] = useState("");
   const [formEquipas, setFormEquipas] = useState([]);
@@ -64,26 +66,41 @@ export default function AdminUsers({ user }) {
     setEditingUser(u);
     setFormRole(u.role || "");
     setFormEquipas(u.equipas || []);
-    setConfirmarEliminar(false); // reset confirmação
+    setFormNome(u.nome || "");        // ← novo
+    setFormEmail(u.email || "");      // ← novo
+    setConfirmarEliminar(false);
   };
+
 
   const handleSave = async () => {
     if (!editingUser) return;
     setSaving(true);
     try {
       const clubeId = user.clubeId || clubId;
-      await updateDoc(doc(db, "utilizadores", editingUser.id), { role: formRole || null, equipas: formEquipas });
-      await updateDoc(doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id), { role: formRole || null, equipas: formEquipas });
+
+      const updates = {
+        role: formRole || null,
+        equipas: formEquipas,
+        nome: formNome,
+        email: formEmail,
+      };
+
+      await updateDoc(doc(db, "utilizadores", editingUser.id), updates);
+      await updateDoc(doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id), updates);
+
       await loadUsers();
       setEditingUser(null);
       setFormRole("");
       setFormEquipas([]);
+      setFormNome("");
+      setFormEmail("");
     } catch (err) {
       console.error("Erro:", err);
     } finally {
       setSaving(false);
     }
   };
+
 
   const eliminarUser = async () => {
     if (!editingUser) return;
@@ -336,6 +353,29 @@ export default function AdminUsers({ user }) {
 
               {/* Corpo scrollável */}
               <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                {/* 0. Nome e Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+                    <input
+                      type="text"
+                      value={formNome}
+                      onChange={(e) => setFormNome(e.target.value)}
+                      placeholder="Nome completo"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      placeholder="email@exemplo.com"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent"
+                    />
+                  </div>
+                </div>
 
                 {/* 1. Role */}
                 <div>
