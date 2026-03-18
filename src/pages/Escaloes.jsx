@@ -5,8 +5,10 @@ import { db } from "../utils/firebase";
 import { Users, Plus, Activity, DollarSign, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
 import ModalAtleta from "../components/atletas/ModalAtleta";
 import { useNavigate } from "react-router-dom";
+import { useClub } from '../contexts/ClubContext';
 
 export default function Escaloes({ user }) {
+  const { clubId } = useClub();
   const [escaloes, setEscaloes] = useState([]);
   const [escalaoSelecionado, setEscalaoSelecionado] = useState(null);
   const [dadosEscalao, setDadosEscalao] = useState(null);
@@ -14,14 +16,16 @@ export default function Escaloes({ user }) {
   const navigate = useNavigate();
 
   // 👇 Só carrega a LISTA de escalões (super leve - 1 query)
-  useEffect(() => {
+useEffect(() => {
+  if (clubId) {
     carregarListaEscaloes();
-  }, []);
+  }
+}, [clubId]);
 
   const [showModalNovoAtleta, setShowModalNovoAtleta] = useState(false);
   const carregarListaEscaloes = async () => {
     try {
-      const snap = await getDocs(collection(db, 'escaloes'));
+      const snap = await getDocs(collection(db, 'clubs', clubId, 'escaloes'));
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       lista.sort((a, b) => a.nome.localeCompare(b.nome));
       setEscaloes(lista);
@@ -34,7 +38,7 @@ export default function Escaloes({ user }) {
     e.preventDefault();
 
     try {
-      await addDoc(collection(db, "atletas"), {
+      await addDoc(collection(db, 'clubs', clubId, 'atletas'), {
         ...formData,
         createdAt: new Date(),
       });
@@ -68,11 +72,11 @@ export default function Escaloes({ user }) {
 
       // 👇 4 queries em paralelo SÓ para este escalão
       const [atletasSnap, treinosSnap, presencasSnap, quotasSnap, utilizadoresSnap] = await Promise.all([
-        getDocs(query(collection(db, 'atletas'), where('equipa', '==', escalao.nome))),
-        getDocs(query(collection(db, 'treinos'), where('equipa', '==', escalao.nome))),
-        getDocs(collection(db, 'presencas')),
-        getDocs(collection(db, 'quotas')),
-        getDocs(query(collection(db, 'utilizadores'), where('role', '==', 'treinador'))) // 👈 BUSCA TREINADORES
+        getDocs(query(collection(db, 'clubs', clubId, 'atletas'), where('equipa', '==', escalao.nome))),
+        getDocs(query(collection(db, 'clubs', clubId, 'treinos'), where('equipa', '==', escalao.nome))),
+        getDocs(collection(db, 'clubs', clubId, 'presencas')),
+        getDocs(collection(db, 'clubs', clubId, 'quotas')),
+        getDocs(query(collection(db, 'clubs', clubId, 'utilizadores'), where('role', '==', 'treinador')))// 👈 BUSCA TREINADORES
       ]);
 
       const atletas = atletasSnap.docs.map(d => ({ id: d.id, ...d.data() }));

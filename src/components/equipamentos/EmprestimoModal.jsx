@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { addDoc, updateDoc, doc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { X, UserPlus, Calendar, User } from 'lucide-react';
+import { useClub } from '../contexts/ClubContext';
 
 const EmprestimoModal = ({ equipamento, onClose, onSave }) => {
+  const { clubId } = useClub();
   const [atletas, setAtletas] = useState([]);
   const [formData, setFormData] = useState({
     atletaId: '',
@@ -22,7 +24,7 @@ const EmprestimoModal = ({ equipamento, onClose, onSave }) => {
   const carregarAtletas = async () => {
     try {
       setLoadingAtletas(true);
-      const atletasSnap = await getDocs(collection(db, 'atletas'));
+      const atletasSnap = await getDocs(collection(db,'clubs', clubId, 'atletas'));
       const atletasData = atletasSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -65,7 +67,7 @@ const EmprestimoModal = ({ equipamento, onClose, onSave }) => {
 
     try {
       // Criar empréstimo
-      await addDoc(collection(db, 'emprestimos'), {
+      await addDoc(collection(db,'clubs', clubId, 'emprestimos'), {
         equipamentoId: equipamento.id,
         equipamentoNome: equipamento.nome,
         atletaId: formData.atletaId,
@@ -78,7 +80,7 @@ const EmprestimoModal = ({ equipamento, onClose, onSave }) => {
       });
 
       // Atualizar estado do equipamento
-      await updateDoc(doc(db, 'equipamentos', equipamento.id), {
+      await updateDoc(doc(db,'clubs', clubId, 'equipamentos', equipamento.id), {
         estado: 'em_uso',
         atualizadoEm: new Date().toISOString()
       });

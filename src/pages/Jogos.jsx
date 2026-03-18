@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
+import { useClub } from '../contexts/ClubContext';
 import {
   Trophy,
   Plus,
@@ -33,6 +34,7 @@ import {
 import { db } from '../utils/firebase';
 
 export default function Jogos({ user }) {
+  const { clubId } = useClub();
   const permissions = usePermissions(user);
   const navigate = useNavigate();
 
@@ -75,7 +77,7 @@ export default function Jogos({ user }) {
 
       if (permissions.isTreinador && permissions.equipas.length > 0) {
         q = query(
-          collection(db, 'jogos'),
+          collection(db, 'clubs', clubId, 'jogos'),
           where('equipa', 'in', permissions.equipas),
           orderBy('data', 'desc')
         );
@@ -101,7 +103,7 @@ export default function Jogos({ user }) {
 
   const loadEscaloes = async () => {
     try {
-      const snap = await getDocs(collection(db, 'escaloes'));
+      const snap = await getDocs(collection(db, 'clubs', clubId, 'escaloes'));
       let data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       if (permissions.isTreinador && permissions.equipas.length > 0) {
@@ -187,16 +189,16 @@ export default function Jogos({ user }) {
     const loadingToast = toast.loading('A eliminar jogo...');
     try {
       const statsQuery = query(
-        collection(db, 'estatisticas_jogo'),
+        collection(db, 'clubs', clubId, 'estatisticas_jogo'),
         where('jogoId', '==', jogoId)
       );
       const statsSnap = await getDocs(statsQuery);
 
       for (const statDoc of statsSnap.docs) {
-        await deleteDoc(doc(db, 'estatisticas_jogo', statDoc.id));
+        await deleteDoc(doc(db, 'clubs', clubId, 'estatisticas_jogo', statDoc.id));
       }
 
-      await deleteDoc(doc(db, 'jogos', jogoId));
+      await deleteDoc(doc(db, 'clubs', clubId,'jogos', jogoId));
       toast.success('Jogo eliminado!', { id: loadingToast });
       loadJogos();
     } catch (error) {

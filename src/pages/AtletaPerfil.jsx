@@ -3,6 +3,7 @@ import PreparacaoFisicaTab from "../components/preparacao-fisica/PreparacaoFisic
 import FisioterapiaTab from "../components/fisioterapia/FisioterapiaTab";
 import { useParams, useNavigate } from "react-router-dom";
 import AcademicTab from "../components/atletas/AcademicTab"; // ajusta o path
+import { useClub } from '../contexts/ClubContext';
 import {
   doc,
   getDoc,
@@ -21,7 +22,7 @@ import DashboardLayout from "../components/DashboardLayout";
 const positions = ["Central", "Ponta", "Distribuidora", "Líbero", "Oposta"];
 
 export default function AtletaPerfil({ user }) {
-  
+  const { clubId } = useClub();
   const { id } = useParams();
   const navigate = useNavigate();
   const tabs = [
@@ -86,7 +87,7 @@ export default function AtletaPerfil({ user }) {
   useEffect(() => {
     const fetchAtleta = async () => {
       try {
-        const ref = doc(db, "atletas", id);
+        const ref = doc(db, "clubs", clubId, "atletas", id)
         const snap = await getDoc(ref);
         if (!snap.exists()) {
           alert("Atleta não encontrado.");
@@ -120,7 +121,7 @@ export default function AtletaPerfil({ user }) {
     const fetchEpisodios = async () => {
       try {
         const qEpis = query(
-          collection(db, "episodiosClinicos"),
+          collection(db, "clubs", clubId, "episodiosClinicos"),
           where("atletaId", "==", id),
           orderBy("dataInicio", "desc"),
         );
@@ -137,7 +138,7 @@ export default function AtletaPerfil({ user }) {
     const fetchPresencasAtleta = async () => {
       try {
         const qPres = query(
-          collection(db, "presencas"),
+          collection(db, "clubs", clubId, "presencas"),
           where("atletaId", "==", id),
           orderBy("createdAt", "desc")
         );
@@ -150,7 +151,7 @@ export default function AtletaPerfil({ user }) {
             let treino = null;
 
             if (data.treinoId) {
-              const treinoSnap = await getDoc(doc(db, "treinos", data.treinoId));
+              const treinoSnap = await getDoc(doc(db, "clubs", clubId, "treinos", data.treinoId));
               if (treinoSnap.exists()) {
                 treino = { id: treinoSnap.id, ...treinoSnap.data() };
               }
@@ -187,7 +188,7 @@ export default function AtletaPerfil({ user }) {
 
     setLoadingSessoes(true);
     try {
-      const ref = collection(db, "episodiosClinicos", episodioId, "sessoes");
+      const ref = collection(db, "clubs", clubId, "episodiosClinicos", episodioId, "sessoes");
       const snap = await getDocs(query(ref, orderBy("dataSessao", "desc")));
       setSessoes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setEpisodioAtivo(episodioId);
@@ -204,7 +205,7 @@ export default function AtletaPerfil({ user }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const ref = doc(db, "atletas", id);
+      const ref = doc(db, "clubs", clubId, "atletas", id);
       await updateDoc(ref, formData);
       alert("Dados do atleta atualizados!");
     } catch (err) {

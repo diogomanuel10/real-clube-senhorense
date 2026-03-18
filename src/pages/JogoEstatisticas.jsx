@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
+import { useClub } from '../contexts/ClubContext';
 import toast from 'react-hot-toast';
 import {
   ChevronLeft,
@@ -31,6 +32,7 @@ import {
 import { db } from '../utils/firebase';
 
 export default function JogoEstatisticas({ user }) {
+  const { clubId } = useClub();
   const { jogoId } = useParams();
   const permissions = usePermissions(user);
   const navigate = useNavigate();
@@ -63,7 +65,7 @@ export default function JogoEstatisticas({ user }) {
 
   const loadJogo = async () => {
     try {
-      const docRef = doc(db, 'jogos', jogoId);
+      const docRef = doc(db,'clubs', clubId, 'jogos', jogoId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -89,7 +91,7 @@ export default function JogoEstatisticas({ user }) {
   const loadAtletas = async (equipa) => {
     try {
       const q = query(
-        collection(db, 'atletas'),
+        collection(db,'clubs', clubId, 'atletas'),
         where('equipa', '==', equipa)
       );
       const snapshot = await getDocs(q);
@@ -107,7 +109,7 @@ export default function JogoEstatisticas({ user }) {
     setLoading(true);
     try {
       const q = query(
-        collection(db, 'estatisticas_jogo'),
+        collection(db,'clubs', clubId, 'estatisticas_jogo'),
         where('jogoId', '==', jogoId)
       );
       const snapshot = await getDocs(q);
@@ -162,11 +164,11 @@ export default function JogoEstatisticas({ user }) {
       };
 
       if (editingStat) {
-        const ref = doc(db, 'estatisticas_jogo', editingStat.id);
+        const ref = doc(db,'clubs', clubId, 'estatisticas_jogo', editingStat.id);
         await updateDoc(ref, statData);
         toast.success('Estatísticas atualizadas!', { id: loadingToast });
       } else {
-        await addDoc(collection(db, 'estatisticas_jogo'), {
+        await addDoc(collection(db,'clubs', clubId, 'estatisticas_jogo'), {
           ...statData,
           createdAt: Timestamp.now(),
         });
@@ -193,7 +195,7 @@ export default function JogoEstatisticas({ user }) {
 
     const loadingToast = toast.loading('A eliminar...');
     try {
-      await deleteDoc(doc(db, 'estatisticas_jogo', statId));
+      await deleteDoc(doc(db,'clubs', clubId, 'estatisticas_jogo', statId));
       toast.success('Eliminado!', { id: loadingToast });
       loadEstatisticas();
     } catch (error) {

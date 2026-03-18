@@ -6,6 +6,7 @@ import QuotasFiltros from "../components/quotas/QuotasFiltros";
 import QuotasTabela from "../components/quotas/QuotasTabela";
 import ModalNovaQuota from "../components/quotas/ModalNovaQuota";
 import ModalRegistarPagamento from "../components/quotas/ModalRegistarPagamento";
+import { useClub } from '../contexts/ClubContext';
 import {
   carregarAtletas,
   carregarQuotas,
@@ -25,6 +26,7 @@ import {
 } from "../utils/quotasUtils";
 
 export default function Quotas() {
+  const { clubId } = useClub()
   const [atletas, setAtletas] = useState([]);
   const [quotas, setQuotas] = useState([]);
   const [pagamentos, setPagamentos] = useState([]);
@@ -50,19 +52,19 @@ export default function Quotas() {
   });
 
   useEffect(() => {
-    carregarDados();
-  }, [mesAno]);
+    if (clubId) carregarDados();
+  }, [mesAno, clubId]);
 
   const carregarDados = async () => {
     try {
       setLoading(true);
-
+      if (!clubId) return;
       const [ano, mes] = mesAno.split("-");
 
       const [atletasData, quotasData, pagamentosData] = await Promise.all([
-        carregarAtletas(),
-        carregarQuotas(mes, ano),
-        carregarPagamentos(mes, ano),
+        carregarAtletas(clubId),
+        carregarQuotas(mes, ano, clubId),
+        carregarPagamentos(mes, ano, clubId),
       ]);
 
       setAtletas(atletasData);
@@ -79,7 +81,7 @@ export default function Quotas() {
   const handleAddQuota = async (formData) => {
     try {
       const [ano, mes] = mesAno.split("-");
-      await criarQuotas(atletas, formData, mes, ano);
+      await criarQuotas(atletas, formData, mes, ano, clubId);
       setShowAddModal(false);
       carregarDados();
     } catch (error) {
@@ -109,6 +111,7 @@ export default function Quotas() {
         dadosPagamento,
         mes,
         ano,
+        clubId
       );
 
       setShowPagamentoModal(false);
@@ -123,7 +126,7 @@ export default function Quotas() {
 
   const handleMarcarComoPago = async (quota) => {
     try {
-      await marcarComoPago(quota.id);
+      await marcarComoPago(quota.id,clubId);
       carregarDados();
     } catch (error) {
       console.error("Erro ao marcar como pago:", error);
@@ -135,7 +138,7 @@ export default function Quotas() {
     if (!confirm("Tens a certeza que queres remover este pagamento?")) return;
 
     try {
-      await removerPagamento(quota.id, quota.atletaId, pagamentos);
+      await removerPagamento(quota.id, quota.atletaId, pagamentos, clubId);
       carregarDados();
     } catch (error) {
       console.error("Erro ao remover pagamento:", error);
@@ -159,14 +162,14 @@ export default function Quotas() {
       return;
 
     try {
-      await eliminarQuota(quota.id);
+      await eliminarQuota(quota.id, clubId);
 
       if (quota.pago) {
         const pagamento = pagamentos.find(
           (p) => p.atletaId === quota.atletaId,
         );
         if (pagamento) {
-          await deleteDoc(doc(db, "pagamentos", pagamento.id));
+          await deleteDoc(doc(db, "clubs", clubId, "pagamentos", pagamento.id));
         }
       }
 

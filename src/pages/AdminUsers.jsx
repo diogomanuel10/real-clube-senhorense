@@ -4,10 +4,12 @@ import { db } from "../utils/firebase";
 import DashboardLayout from "../components/DashboardLayout";
 import { Users, Shield, Edit3, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useClub } from '../contexts/ClubContext';
 
 const ROLES = ["admin", "treinador", "fisio", "direcao", "atleta", "preparador"];
 
 export default function AdminUsers({ user }) {
+  const { clubId } = useClub();
   const navigate = useNavigate();
   const [utilizadores, setUtilizadores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function AdminUsers({ user }) {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+      const clubeId = user.clubeId || clubId;
       if (!clubeId) {
         console.log('❌ Sem clubeId');
         setLoading(false);
@@ -43,7 +45,7 @@ export default function AdminUsers({ user }) {
     loadUsers();
     const loadEscaloes = async () => {
       try {
-        const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+        const clubeId = user.clubeId || clubId;
         const snap = await getDocs(collection(db, `clubs/${clubeId}/escaloes`));
         const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setEscaloes(lista);
@@ -64,7 +66,7 @@ export default function AdminUsers({ user }) {
     if (!editingUser) return;
     setSaving(true);
     try {
-      const clubeId = user.clubeId || localStorage.getItem('ultimoClube');
+      const clubeId = user.clubeId || clubId;
 
       // 1. Atualiza ÍNDICE global
       const refGlobal = doc(db, "utilizadores", editingUser.id);

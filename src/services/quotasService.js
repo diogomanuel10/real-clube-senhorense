@@ -1,23 +1,14 @@
 import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  doc, 
-  query, 
-  where 
+  collection, addDoc, updateDoc, deleteDoc, 
+  getDocs, doc, query, where 
 } from 'firebase/firestore';
-import { db } from '../utils/firebase';  // <-- Mudar de ./firebase para ../firebase
+import { db } from '../utils/firebase';
 
 // Carregar atletas
-export async function carregarAtletas() {
+export async function carregarAtletas(clubId) {
   try {
-    const snapshot = await getDocs(collection(db, 'atletas'));
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const snapshot = await getDocs(collection(db, 'clubs', clubId, 'atletas'));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Erro ao carregar atletas:', error);
     throw error;
@@ -25,19 +16,15 @@ export async function carregarAtletas() {
 }
 
 // Carregar quotas do mês
-export async function carregarQuotas(mes, ano) {
+export async function carregarQuotas(mes, ano, clubId) {
   try {
     const q = query(
-      collection(db, 'quotas'),
+      collection(db, 'clubs', clubId, 'quotas'),
       where('mes', '==', parseInt(mes)),
       where('ano', '==', parseInt(ano))
     );
-    
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Erro ao carregar quotas:', error);
     throw error;
@@ -45,19 +32,15 @@ export async function carregarQuotas(mes, ano) {
 }
 
 // Carregar pagamentos do mês
-export async function carregarPagamentos(mes, ano) {
+export async function carregarPagamentos(mes, ano, clubId) {
   try {
     const q = query(
-      collection(db, 'pagamentos'),
+      collection(db, 'clubs', clubId, 'pagamentos'),
       where('mes', '==', parseInt(mes)),
       where('ano', '==', parseInt(ano))
     );
-    
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
     console.error('Erro ao carregar pagamentos:', error);
     throw error;
@@ -65,17 +48,14 @@ export async function carregarPagamentos(mes, ano) {
 }
 
 // Criar quotas
-export async function criarQuotas(atletas, formData, mes, ano) {
+export async function criarQuotas(atletas, formData, mes, ano, clubId) {
   try {
-    // Filtrar atletas pelas equipas selecionadas
     let atletasFiltrados = atletas;
     if (formData.equipas.length > 0) {
       atletasFiltrados = atletas.filter(a => formData.equipas.includes(a.equipa));
     }
-
-    // Criar quota para cada atleta
-    const promises = atletasFiltrados.map(atleta => {
-      return addDoc(collection(db, 'quotas'), {
+    const promises = atletasFiltrados.map(atleta =>
+      addDoc(collection(db, 'clubs', clubId, 'quotas'), {
         atletaId: atleta.id,
         atletaNome: atleta.nome,
         equipa: atleta.equipa,
@@ -86,9 +66,8 @@ export async function criarQuotas(atletas, formData, mes, ano) {
         ano: parseInt(ano),
         pago: false,
         createdAt: new Date()
-      });
-    });
-
+      })
+    );
     await Promise.all(promises);
     return true;
   } catch (error) {
@@ -98,13 +77,10 @@ export async function criarQuotas(atletas, formData, mes, ano) {
 }
 
 // Registar pagamento
-export async function registarPagamento(quotaId, atletaId, atletaNome, equipa, dadosPagamento, mes, ano) {
+export async function registarPagamento(quotaId, atletaId, atletaNome, equipa, dadosPagamento, mes, ano, clubId) {
   try {
-    // Registar pagamento
-    await addDoc(collection(db, 'pagamentos'), {
-      atletaId,
-      atletaNome,
-      equipa,
+    await addDoc(collection(db, 'clubs', clubId, 'pagamentos'), {
+      atletaId, atletaNome, equipa,
       valor: parseFloat(dadosPagamento.valor),
       dataPagamento: dadosPagamento.dataPagamento,
       metodoPagamento: dadosPagamento.metodoPagamento,
@@ -113,15 +89,12 @@ export async function registarPagamento(quotaId, atletaId, atletaNome, equipa, d
       ano: parseInt(ano),
       createdAt: new Date()
     });
-
-    // Atualizar quota para pago
-    await updateDoc(doc(db, 'quotas', quotaId), {
+    await updateDoc(doc(db, 'clubs', clubId, 'quotas', quotaId), {
       pago: true,
       dataPagamento: dadosPagamento.dataPagamento,
       metodoPagamento: dadosPagamento.metodoPagamento,
       updatedAt: new Date()
     });
-
     return true;
   } catch (error) {
     console.error('Erro ao registar pagamento:', error);
@@ -130,9 +103,9 @@ export async function registarPagamento(quotaId, atletaId, atletaNome, equipa, d
 }
 
 // Marcar quota como paga (sem detalhes)
-export async function marcarComoPago(quotaId) {
+export async function marcarComoPago(quotaId, clubId) {
   try {
-    await updateDoc(doc(db, 'quotas', quotaId), {
+    await updateDoc(doc(db, 'clubs', clubId, 'quotas', quotaId), {
       pago: true,
       dataPagamento: new Date().toISOString().split('T')[0],
       metodoPagamento: 'Não especificado',
@@ -146,22 +119,18 @@ export async function marcarComoPago(quotaId) {
 }
 
 // Remover pagamento
-export async function removerPagamento(quotaId, atletaId, pagamentos) {
+export async function removerPagamento(quotaId, atletaId, pagamentos, clubId) {
   try {
-    // Atualizar quota para não pago
-    await updateDoc(doc(db, 'quotas', quotaId), {
+    await updateDoc(doc(db, 'clubs', clubId, 'quotas', quotaId), {
       pago: false,
       dataPagamento: null,
       metodoPagamento: null,
       updatedAt: new Date()
     });
-    
-    // Remover do histórico de pagamentos
     const pagamento = pagamentos.find(p => p.atletaId === atletaId);
     if (pagamento) {
-      await deleteDoc(doc(db, 'pagamentos', pagamento.id));
+      await deleteDoc(doc(db, 'clubs', clubId, 'pagamentos', pagamento.id));
     }
-    
     return true;
   } catch (error) {
     console.error('Erro ao remover pagamento:', error);
@@ -170,9 +139,9 @@ export async function removerPagamento(quotaId, atletaId, pagamentos) {
 }
 
 // Eliminar quota
-export async function eliminarQuota(quotaId) {
+export async function eliminarQuota(quotaId, clubId) {
   try {
-    await deleteDoc(doc(db, 'quotas', quotaId));
+    await deleteDoc(doc(db, 'clubs', clubId, 'quotas', quotaId));
     return true;
   } catch (error) {
     console.error('Erro ao eliminar quota:', error);

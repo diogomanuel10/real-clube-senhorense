@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { addDoc, updateDoc, doc, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { X, Package, Save } from 'lucide-react';
+import { useClub } from '../contexts/ClubContext';
 
 const EquipamentoModal = ({ equipamento, categorias, estados, onClose, onSave }) => {
+  const { clubId } = useClub();
   const [formData, setFormData] = useState({
     nome: '',
     codigo: '',
@@ -68,11 +70,11 @@ const EquipamentoModal = ({ equipamento, categorias, estados, onClose, onSave })
 
       if (equipamento) {
         // Atualizar
-        await updateDoc(doc(db, 'equipamentos', equipamento.id), equipamentoData);
+        await updateDoc(doc(db,'clubs', clubId, 'equipamentos', equipamento.id), equipamentoData);
       } else {
         // Criar novo
         equipamentoData.criadoEm = new Date().toISOString();
-        await addDoc(collection(db, 'equipamentos'), equipamentoData);
+        await addDoc(collection(db,'clubs', clubId, 'equipamentos'), equipamentoData);
       }
 
       onSave();
