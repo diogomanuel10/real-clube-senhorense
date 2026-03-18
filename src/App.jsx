@@ -7,9 +7,8 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { ClubProvider } from "./contexts/ClubContext"; // ← NOVO
+import { ClubProvider } from "./contexts/ClubContext";
 import JogoLive from './pages/JogoLive';
-import ConviteRegisto from "./pages/ConviteRegisto";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./utils/firebase";
@@ -35,9 +34,16 @@ import Equipamentos from "./pages/Equipamentos";
 import SuperAdmin from "./pages/SuperAdmin";
 import "./styles/globals.css";
 
+
 function AppContent({ user }) {
   return (
     <Routes>
+
+      {/* ✅ ROTAS PÚBLICAS — acessíveis sem login */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/convite" element={<Convite />} />
+
+      {/* 🔒 ROTAS PROTEGIDAS */}
       {user ? (
         <>
           <Route path="/" element={<Dashboard user={user} />} />
@@ -46,14 +52,12 @@ function AppContent({ user }) {
           <Route path="/superadmin" element={<DashboardLayout user={user}><SuperAdmin /></DashboardLayout>} />
           <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
           <Route path="/admin/utilizadores" element={<AdminUsers user={user} />} />
-          <Route path="/convite" element={<Convite />} />
           <Route path="/escaloes" element={<DashboardLayout user={user}><Escaloes user={user} /></DashboardLayout>} />
           <Route path="/jogos" element={<DashboardLayout user={user}><Jogos user={user} /></DashboardLayout>} />
           <Route path="/treinos" element={<DashboardLayout user={user}><Treinos user={user} /></DashboardLayout>} />
           <Route path="/jogos/:jogoId/estatisticas" element={<DashboardLayout user={user}><JogoEstatisticas user={user} /></DashboardLayout>} />
           <Route path="/jogos/:jogoId/live" element={<DashboardLayout user={user}><JogoLive user={user} /></DashboardLayout>} />
           <Route path="/presencas" element={<DashboardLayout user={user}><Presencas user={user} /></DashboardLayout>} />
-          <Route path="/convite" element={<DashboardLayout user={user}><ConviteRegisto user={user} /></DashboardLayout>} />
           <Route path="/captacoes" element={<DashboardLayout user={user}><Captacoes user={user} /></DashboardLayout>} />
           <Route path="/quotas" element={<DashboardLayout user={user}><Quotas user={user} /></DashboardLayout>} />
           <Route path="/equipamentos" element={<DashboardLayout user={user}><Equipamentos user={user} /></DashboardLayout>} />
@@ -65,10 +69,11 @@ function AppContent({ user }) {
       ) : (
         <Route path="*" element={<Navigate to="/login" replace />} />
       )}
-      <Route path="/login" element={<Login />} />
+
     </Routes>
   );
 }
+
 
 function App() {
   const { user, loading } = useAuth();
@@ -83,7 +88,7 @@ function App() {
 
   return (
     <Router>
-      <ClubProvider>  {/* ← ENVOLVE TUDO */}
+      <ClubProvider>
         <Toaster />
         <AppContent user={user} />
       </ClubProvider>
