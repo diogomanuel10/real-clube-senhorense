@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { usePermissions } from "../hooks/usePermissions";
+import { useClub } from '../contexts/ClubContext';
 import {
   Calendar,
   TrendingUp,
@@ -28,6 +29,7 @@ const MESES = [
 ];
 
 export default function Presencas({ user }) {
+  const { clubId } = useClub();
   const permissions = usePermissions(user);
   const [escaloes, setEscaloes] = useState([]);
   const [escalaoSelecionado, setEscalaoSelecionado] = useState("");
@@ -44,7 +46,7 @@ export default function Presencas({ user }) {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 8;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -52,20 +54,20 @@ export default function Presencas({ user }) {
 
 
   useEffect(() => {
-    if (!permissions.loading) {
+    if (!permissions.loading && clubId) { // ← garante clubId
       carregarEscaloes();
     }
-  }, [permissions.loading]);
+  }, [permissions.loading, clubId]); // ← clubId na dependência
 
   useEffect(() => {
-    if (escalaoSelecionado) {
+    if (escalaoSelecionado && clubId) { // ← garante clubId
       carregarDadosEscalao();
     }
-  }, [escalaoSelecionado, currentYear, currentMonth]);
+  }, [escalaoSelecionado, currentYear, currentMonth, clubId]); // ← clubId
 
   const carregarEscaloes = async () => {
     try {
-      const snap = await getDocs(collection(db, "escaloes"));
+      const snap = await getDocs(collection(db, "clubs", clubId, "escaloes"));
       let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       if (permissions.isTreinador && permissions.equipas.length > 0) {
@@ -98,7 +100,7 @@ export default function Presencas({ user }) {
 
     setLoading(true);
     try {
-      const atletasSnap = await getDocs(collection(db, "atletas"));
+      const atletasSnap = await getDocs(collection(db, "clubs", clubId, "atletas"));
       const todosAtletas = atletasSnap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -116,7 +118,7 @@ export default function Presencas({ user }) {
         currentMonth + 1,
       ).padStart(2, "0")}-${ultimoDia.getDate()}`;
 
-      const treinosSnap = await getDocs(collection(db, "treinos"));
+      const treinosSnap = await getDocs(collection(db, "clubs", clubId, "treinos"));
       const todosTreinos = treinosSnap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -131,7 +133,7 @@ export default function Presencas({ user }) {
 
       if (treinosEscalao.length > 0) {
         const treinoIds = treinosEscalao.map((t) => t.id);
-        const presencasSnap = await getDocs(collection(db, "presencas"));
+        const presencasSnap = await getDocs(collection(db, "clubs", clubId, "presencas"));
         const todasPresencas = presencasSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
@@ -537,9 +539,29 @@ export default function Presencas({ user }) {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 font-semibold text-sm">
-                              {atleta.stats.justificadas}
-                            </span>
+                            {atleta.stats.justificadas > 0 ? (
+                              <div className="space-y-1">
+                                <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 font-semibold text-sm">
+                                  {atleta.stats.justificadas}
+                                </span>
+                                <div className="space-y-1">
+                                  {presencas
+                                    .filter((p) => p.atletaId === atleta.id && p.estado === "justificada" && p.justificacao)
+                                    .map((p) => {
+                                      const treino = treinos.find((t) => t.id === p.treinoId);
+                                      return (
+                                        <p key={p.id} className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-left">
+                                          <span className="font-semibold">{treino?.data || "?"}</span>: {p.justificacao}
+                                        </p>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-semibold text-sm">
+                                0
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-4 text-center">
                             {atleta.stats.atrasos > 0 ? (
@@ -623,6 +645,16 @@ export default function Presencas({ user }) {
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-semibold text-xs">
                             {atleta.stats.justificadas}
                           </span>
+                          {presencas
+                            .filter((p) => p.atletaId === atleta.id && p.estado === "justificada" && p.justificacao)
+                            .map((p) => {
+                              const treino = treinos.find((t) => t.id === p.treinoId);
+                              return (
+                                <p key={p.id} className="text-[9px] text-amber-600 text-center mt-0.5 w-full px-1">
+                                  <span className="font-semibold">{treino?.data || "?"}</span>: {p.justificacao}
+                                </p>
+                              );
+                            })}
                         </div>
                         <div className="flex flex-col items-center flex-1">
                           <span className="text-slate-500 mb-1">Atrasos</span>

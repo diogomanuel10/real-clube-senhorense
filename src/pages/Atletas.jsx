@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePermissions } from '../hooks/usePermissions';
 import ModalAtleta from "../components/atletas/ModalAtleta";
+import { useClub } from '../contexts/ClubContext';
 import {
   Users,
   Plus,
@@ -27,6 +28,7 @@ import Papa from "papaparse";
 
 export default function Atletas({ user }) {
   const permissions = usePermissions(user);
+  const { clubId } = useClub()
   const navigate = useNavigate();
   const [atletas, setAtletas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,23 +59,20 @@ export default function Atletas({ user }) {
 
 
   useEffect(() => {
-    if (!permissions.loading) {
+    if (!permissions.loading && clubId) { // ← garante que clubId existe
       loadAtletas();
       carregarEscaloes();
     }
-  }, [permissions.loading]);
+  }, [permissions.loading, clubId]); // ← clubId na dependência
+
 
 
   const loadAtletas = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, "atletas"), orderBy("nome"));
+      const q = query(collection(db, "clubs", clubId, "atletas"), orderBy("nome")); // ← clubId
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setAtletas(data);
     } catch (error) {
       console.error("Erro ao carregar atletas:", error);
@@ -84,7 +83,7 @@ export default function Atletas({ user }) {
 
   const carregarEscaloes = async () => {
     try {
-      const snap = await getDocs(collection(db, "escaloes"));
+      const snap = await getDocs(collection(db, "clubs", clubId, "escaloes")); // ← clubId
       let data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       if (permissions.isTreinador && permissions.equipas.length > 0) {
@@ -97,6 +96,7 @@ export default function Atletas({ user }) {
       console.error("Erro ao carregar escalões:", err);
     }
   };
+
 
   const filteredAtletas = atletas.filter((atleta) => {
     const matchTexto =
@@ -140,13 +140,12 @@ export default function Atletas({ user }) {
       };
 
       if (editingAtleta) {
-        const ref = doc(db, "atletas", editingAtleta.id);
+        const ref = doc(db, "clubs", clubId, "atletas", editingAtleta.id); // ← clubId
         await updateDoc(ref, atletaData);
-        alert("Atleta atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, "atletas"), atletaData);
-        alert("Atleta adicionado com sucesso!");
+        await addDoc(collection(db, "clubs", clubId, "atletas"), atletaData); // ← clubId
       }
+
 
       setShowAddModal(false);
       setEditingAtleta(null);
@@ -166,7 +165,7 @@ export default function Atletas({ user }) {
     if (!confirm("Tens a certeza que queres eliminar este atleta?")) return;
 
     try {
-      await deleteDoc(doc(db, "atletas", atletaId));
+      await deleteDoc(doc(db, "clubs", clubId, "atletas", atletaId));
       alert("Atleta eliminado com sucesso!");
       loadAtletas();
     } catch (error) {
@@ -251,7 +250,8 @@ export default function Atletas({ user }) {
           }
 
           const batch = writeBatch(db);
-          const colRef = collection(db, "atletas");
+          const colRef = collection(db, "clubs", clubId, "atletas");
+
 
           rows.forEach((row) => {
             const docRef = doc(colRef);

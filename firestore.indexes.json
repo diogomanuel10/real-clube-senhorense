@@ -47,6 +47,25 @@
       ]
     },
     {
+  "collectionGroup": "captacoes",
+  "queryScope": "COLLECTION", 
+  "fields": [
+    { "fieldPath": "criadoPorUid", "order": "ASCENDING" },
+    { "fieldPath": "escalao", "order": "ASCENDING" },
+    { "fieldPath": "dataRegisto", "order": "DESCENDING" }
+  ]
+},
+{
+  "collectionGroup": "emprestimos", 
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "devolvido", "order": "ASCENDING" },
+    { "fieldPath": "userId", "order": "ASCENDING" },
+    { "fieldPath": "dataSaida", "order": "DESCENDING" }
+  ]
+}
+,
+    {
       "collectionGroup": "presencas",
       "queryScope": "COLLECTION",
       "fields": [
