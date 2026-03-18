@@ -1,12 +1,29 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';  // ← ADICIONA
-import { auth, db } from '../utils/firebase';        // ← IMPORTA auth + db
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../utils/firebase';
 
-// 1️⃣ DEFINE O CONTEXT PRIMEIRO
 export const ClubContext = createContext(null);
 
-export const ClubProvider = ({ children }) => {
+export const useClub = () => {
+  const context = useContext(ClubContext);
+  if (!context) throw new Error('useClub deve ser usado dentro de ClubProvider');
+  return context;
+};
+
+function applyClubTheme(config) {
+  if (!config) return;
+  const root = document.documentElement;
+  const corPrimaria = config.corPrimaria || '#0b1635';
+  const corDestaque  = config.corDestaque  || '#f5c623';
+  root.style.setProperty('--cor-primaria',      corPrimaria);
+  root.style.setProperty('--cor-destaque',       corDestaque);
+  root.style.setProperty('--cor-primaria-light', corPrimaria + '22');
+  root.style.setProperty('--cor-destaque-light', corDestaque + '33');
+}
+
+// ← DEFAULT EXPORT resolve o aviso do HMR do Vite
+export default function ClubProvider({ children }) {
   const [clubId, setClubId] = useState(null);
   const [clubConfig, setClubConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,12 +32,9 @@ export const ClubProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          console.log(user.uid)
-          // PRIORIDADE 1: User profile
           const userDoc = await getDoc(doc(db, `utilizadores/${user.uid}`));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            console.log(userData)
             if (userData.clubeId) {
               console.log('✅ ClubId do USER:', userData.clubeId);
               setClubId(userData.clubeId);
@@ -37,7 +51,6 @@ export const ClubProvider = ({ children }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const teamIdFromUrl = urlParams.get('team_id');
       if (teamIdFromUrl) {
-        console.log('🔗 ClubId da URL:', teamIdFromUrl);
         setClubId(teamIdFromUrl);
         loadConfig(teamIdFromUrl);
         return;
@@ -47,13 +60,12 @@ export const ClubProvider = ({ children }) => {
       const hostname = window.location.hostname;
       const map = {
         'rc-senhorense-voleibol.web.app': 'senhorense',
-        'real-clube-senhorense.pt': 'senhorense',
-        'stamp.clubsidesite.pt': 'stamp',
-        'localhost': 'senhorense',
-        'demo.clubside.pt': 'demo',
+        'real-clube-senhorense.pt':       'senhorense',
+        'stamp.clubsidesite.pt':          'stamp',
+        'localhost':                      'senhorense',
+        'demo.clubside.pt':               'demo',
       };
       const detected = map[hostname] || 'senhorense';
-      console.log('🌐 ClubId hostname:', detected);
       setClubId(detected);
       loadConfig(detected);
     });
@@ -66,8 +78,19 @@ export const ClubProvider = ({ children }) => {
       const configRef = doc(db, `clubs/${clubIdToLoad}/config`, 'geral');
       const configSnap = await getDoc(configRef);
       if (configSnap.exists()) {
-        setClubConfig({ id: clubIdToLoad, ...configSnap.data() });
-        applyClubTheme(config);
+        const raw = configSnap.data();
+        const data = {
+          id: clubIdToLoad,
+          ...raw,
+          corPrimaria: raw.branding?.corPrimaria || raw.corPrimaria || '#0b1635',
+          corDestaque:  raw.branding?.corDestaque  || raw.corDestaque  || '#f5c623',
+          nomeClube:    raw.nome     || raw.nomeClube    || 'ClubSide',
+          logoUrl:      raw.logoUrl  || '/logo.png',
+          lema:         raw.lema     || '',
+          epoca:        raw.epoca    || '25/26',
+        };
+        setClubConfig(data);
+        applyClubTheme(data);
       }
     } catch (err) {
       console.error('Erro config:', err);
@@ -81,24 +104,4 @@ export const ClubProvider = ({ children }) => {
       {children}
     </ClubContext.Provider>
   );
-};
-
-function applyClubTheme(config) {
-  if (!config) return;
-  const root = document.documentElement;
-
-  const corPrimaria = config.corPrimaria || '#0b1635';
-  const corDestaque = config.corDestaque || '#f5c623';
-
-  root.style.setProperty('--cor-primaria', corPrimaria);
-  root.style.setProperty('--cor-destaque', corDestaque);
-  root.style.setProperty('--cor-primaria-light', corPrimaria + '22'); // 13% opacity
-  root.style.setProperty('--cor-destaque-light', corDestaque + '33'); // 20% opacity
 }
-
-
-export const useClub = () => {
-  const context = useContext(ClubContext);
-  if (!context) throw new Error('useClub deve ser usado dentro de ClubProvider');
-  return context;
-};

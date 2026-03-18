@@ -7,7 +7,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { ClubProvider } from "./contexts/ClubContext";
+import ClubProvider from './contexts/ClubContext';
 import JogoLive from './pages/JogoLive';
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";

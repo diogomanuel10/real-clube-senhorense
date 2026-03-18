@@ -1,60 +1,44 @@
 import { usePermissions } from '../hooks/usePermissions';
-import { useState } from 'react'; 
+import { useState } from 'react';
 import { useDashboardAdmin } from '../hooks/useDashboardAdmin';
 import StatsCardsAdmin from '../components/dashboard/admin/StatsCardsAdmin';
-import QuotasOverviewWidget from '../components/dashboard/admin/QuotasOverviewWidget';
 import EscaloesComparisonWidget from '../components/dashboard/admin/EscaloesComparisonWidget';
-import AtividadeRecenteWidget from '../components/dashboard/admin/AtividadeRecenteWidget';
-import GraficosWidget from '../components/dashboard/admin/GraficosWidget';
-import AlertasWidget from '../components/dashboard/admin/AlertasWidget'; // NOVO
-import { useNavigate } from 'react-router-dom'; // ← ADICIONA ESTA LINHA
-import {
-  Users,
-  UserCog,
-  Calendar,
-  ClipboardList,
-  FileText,
-  ShoppingBag,
-  Trophy,
-  Activity, // ← ADICIONA ESTA LINHA
-  ChevronRight, RefreshCw
-} from 'lucide-react';
+import AlertasWidget from '../components/dashboard/admin/AlertasWidget';
+import { useNavigate } from 'react-router-dom';
+import { useClub } from '../contexts/ClubContext';
+import { Activity, RefreshCw } from 'lucide-react';
 
 export default function DashboardAdmin({ user }) {
+  const { clubConfig } = useClub();
   const permissions = usePermissions(user);
   const navigate = useNavigate();
+
+  const corPrimaria = clubConfig?.corPrimaria || '#0b1635';
+  const corDestaque  = clubConfig?.corDestaque  || '#f5c623';
+  const nomeClube    = clubConfig?.nomeClube    || 'Clube';
+  const epoca        = clubConfig?.epoca        || '25/26';
+
   const {
-    stats,
-    quotas,
-    escaloes,
-    treinadores,
-    atividadeRecente,
-    alertas, // NOVO
-    metricasCaptacao, // NOVO
-    loading,
-    recarregar,
-  } = useDashboardAdmin({ clubId: user.clubeId });;
+    stats, quotas, escaloes, treinadores,
+    atividadeRecente, alertas, metricasCaptacao,
+    loading, recarregar,
+  } = useDashboardAdmin({ clubId: user.clubeId });
 
   const [captacaoParaDetalhes, setCaptacaoParaDetalhes] = useState(null);
-  const abrirCaptacaoModal = (captacao) => {
-    setCaptacaoParaDetalhes(captacao);
-  };
+  const abrirCaptacaoModal = (captacao) => setCaptacaoParaDetalhes(captacao);
+
   const dataFormatada = new Date().toLocaleDateString('pt-PT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
   const primeiroNome = user?.displayName?.split(' ')[0] || user?.nome || 'Admin';
-
-  // Calcular total de alertas críticos + atenção
   const alertasUrgentes = (alertas?.criticos?.length || 0) + (alertas?.atencao?.length || 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+
+      {/* ── Header ── */}
+      <div className="text-white" style={{ background: `linear-gradient(to right, ${corPrimaria}, ${corPrimaria}cc)` }}>
         <div className="px-4 md:px-8 py-6 md:py-8">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -63,11 +47,10 @@ export default function DashboardAdmin({ user }) {
                   👔 Administração
                 </span>
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
-                  📅 Época 25/26
+                  📅 Época {epoca}
                 </span>
-                {/* NOVO: Badge de alertas urgentes */}
                 {alertasUrgentes > 0 && (
-                  <span className="px-3 py-1 bg-red-500 backdrop-blur-sm rounded-full text-xs font-bold animate-pulse">
+                  <span className="px-3 py-1 bg-red-500 rounded-full text-xs font-bold animate-pulse">
                     🔔 {alertasUrgentes} {alertasUrgentes === 1 ? 'alerta' : 'alertas'}
                   </span>
                 )}
@@ -75,12 +58,11 @@ export default function DashboardAdmin({ user }) {
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
                 Bom dia, {primeiroNome}! 👋
               </h1>
-              <p className="text-slate-200 text-sm md:text-base mb-2 capitalize">
-                {dataFormatada}
+              <p className="text-white/80 text-sm md:text-base mb-2 capitalize">{dataFormatada}</p>
+              <p className="text-white/60 text-sm">
+                🏐 <span className="font-medium">{nomeClube}</span>
               </p>
-              <p className="text-slate-300 text-sm">
-                🏐 <span className="font-medium">Real Clube Senhorense</span>
-              </p>
+              <div className="h-1 w-16 rounded-full mt-3" style={{ backgroundColor: corDestaque }} />
             </div>
 
             <button
@@ -95,9 +77,8 @@ export default function DashboardAdmin({ user }) {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* ── Main Content ── */}
       <div className="px-4 md:px-8 py-6 md:py-8">
-        {/* Stats Cards */}
         <StatsCardsAdmin stats={stats} loading={loading} navigate={navigate} />
 
         {captacaoParaDetalhes && (
@@ -105,52 +86,29 @@ export default function DashboardAdmin({ user }) {
             open={true}
             onClose={() => setCaptacaoParaDetalhes(null)}
             captacao={captacaoParaDetalhes}
-            permissions={{ isTreinador: false }} // Direção
-            onAprovarAtleta={() => { /* já implementado */ }}
+            permissions={{ isTreinador: false }}
+            onAprovarAtleta={() => {}}
           />
         )}
-        {/* Grid Principal */}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
           {/* Coluna Esquerda (2/3) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* NOVO: Widget de Alertas no topo da coluna esquerda */}
             <AlertasWidget
               alertas={alertas}
               loading={loading}
-              recarregarDashboard={recarregar} // ADICIONA ESTA PROP
+              recarregarDashboard={recarregar}
               onAbrirCaptacao={abrirCaptacaoModal}
             />
-
-            {/* Card Firebase Monitoring */}
-            <div
-              onClick={() => navigate('/firebase-monitoring')}
-              className="bg-slate-900 rounded-2xl shadow-lg p-6 text-white hover:shadow-xl transition-all cursor-pointer"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <Activity className="w-8 h-8" />
-                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-medium">
-                  Monitoring
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Firebase</h3>
-              <p className="text-purple-100 text-sm">
-                Monitorizar custos e uso
-              </p>
-            </div>
-
 
           </div>
 
           {/* Coluna Direita (1/3) */}
           <div className="space-y-6 lg:sticky lg:top-6">
-            {/* Comparação entre Escalões */}
-            <EscaloesComparisonWidget
-              escaloes={escaloes}
-              loading={loading}
-            />
+            <EscaloesComparisonWidget escaloes={escaloes} loading={loading} />
           </div>
         </div>
-
       </div>
     </div>
   );

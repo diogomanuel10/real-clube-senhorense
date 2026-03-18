@@ -1,78 +1,57 @@
-// src/components/DashboardLayout.jsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Users, Users2, Calendar, BarChart3, UserCog, UserPlus, ClipboardCheck, LogOut, Menu, X, Shield, Megaphone, Dumbbell, Trophy } from "lucide-react";
 import { FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../utils/firebase";
+import { auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useClub } from "../contexts/ClubContext";
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/", roles: ["admin", "treinador", "coordenador", "fisio"] },
-  { id: "superadmin", label: "Gestão de Clubes", icon: Users, path: "/superadmin", roles: ["superadmin"] },
-  { id: "atletas", label: "Atletas", icon: Users, path: "/atletas", roles: ["admin", "treinador", "coordenador", "fisio"] },
-  { id: "escaloes", label: "Escalões", icon: Users2, path: "/escaloes", roles: ["admin", "coordenador"] },
-  { id: "captacoes", label: "Captações", icon: UserPlus, path: "/captacoes", roles: ["admin", "treinador", "coordenador"] },
-  { id: "calendario", label: "Calendário", icon: Calendar, path: "/treinos", roles: ["admin", "treinador", "coordenador", "fisio"] },
-  { id: "jogos", label: "Jogos", icon: Trophy, path: "/jogos", roles: ["admin", "treinador", "coordenador"] },
-  { id: "presencas", label: "Presenças", icon: ClipboardCheck, path: "/presencas", roles: ["admin", "treinador", "coordenador"] },
-  { id: "avaliacoes", label: "Avaliações", icon: BarChart3, path: "/avaliacoes", roles: ["treinador", "admin", "coordenador"] },
-  { id: "sebenta", label: "Sebenta Exercícios", icon: Dumbbell, path: "/exercicios", roles: ["treinador", "admin", "coordenador", "fisio"] },
-  { id: "comunicados", label: "Comunicados", icon: Megaphone, path: "/comunicados", roles: ["admin", "direcao", "coordenador"] },
-  { id: "equipamentos", label: "Equipamentos", icon: Users2, path: "/equipamentos", roles: ["admin", "coordenador"] },
-  { id: "quotas", label: "Quotas", icon: FaMoneyBillWave, path: "/quotas", roles: ["admin", "coordenador"] },
-  { id: "admin-users", label: "Utilizadores", icon: Shield, path: "/admin/utilizadores", roles: ["admin", "coordenador"] },
+  { id: "dashboard",   label: "Dashboard",         icon: BarChart3,      path: "/",                    roles: ["admin", "treinador", "coordenador", "fisio"] },
+  { id: "superadmin",  label: "Gestão de Clubes",  icon: Users,          path: "/superadmin",          roles: ["superadmin"] },
+  { id: "atletas",     label: "Atletas",            icon: Users,          path: "/atletas",             roles: ["admin", "treinador", "coordenador", "fisio"] },
+  { id: "escaloes",    label: "Escalões",           icon: Users2,         path: "/escaloes",            roles: ["admin", "coordenador"] },
+  { id: "captacoes",   label: "Captações",          icon: UserPlus,       path: "/captacoes",           roles: ["admin", "treinador", "coordenador"] },
+  { id: "calendario",  label: "Calendário",         icon: Calendar,       path: "/treinos",             roles: ["admin", "treinador", "coordenador", "fisio"] },
+  { id: "jogos",       label: "Jogos",              icon: Trophy,         path: "/jogos",               roles: ["admin", "treinador", "coordenador"] },
+  { id: "presencas",   label: "Presenças",          icon: ClipboardCheck, path: "/presencas",           roles: ["admin", "treinador", "coordenador"] },
+  { id: "avaliacoes",  label: "Avaliações",         icon: BarChart3,      path: "/avaliacoes",          roles: ["treinador", "admin", "coordenador"] },
+  { id: "sebenta",     label: "Sebenta Exercícios", icon: Dumbbell,       path: "/exercicios",          roles: ["treinador", "admin", "coordenador", "fisio"] },
+  { id: "comunicados", label: "Comunicados",        icon: Megaphone,      path: "/comunicados",         roles: ["admin", "direcao", "coordenador"] },
+  { id: "equipamentos",label: "Equipamentos",       icon: Users2,         path: "/equipamentos",        roles: ["admin", "coordenador"] },
+  { id: "quotas",      label: "Quotas",             icon: FaMoneyBillWave,path: "/quotas",              roles: ["admin", "coordenador"] },
+  { id: "admin-users", label: "Utilizadores",       icon: Shield,         path: "/admin/utilizadores",  roles: ["admin", "coordenador"] },
 ];
 
 export default function DashboardLayout({ children, user }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [configClube, setConfigClube] = useState(null);
 
-  const userRole = user?.role || "viewer";
+  // ─── Usa o ClubContext em vez de fetch próprio ───────────────────────────
+  const { clubConfig } = useClub();
 
-  // ── Carregar configs do clube ──
-  useEffect(() => {
-    // Salva clube na primeira visita
-    const urlClube = new URLSearchParams(window.location.search).get('clube');
-    if (urlClube) localStorage.setItem('ultimoClube', urlClube);
+  const corPrimaria = clubConfig?.corPrimaria || '#0b1635';
+  const corDestaque  = clubConfig?.corDestaque  || '#f5c623';
+  const nomeClube    = clubConfig?.nomeClube    || clubConfig?.nome || 'ClubSide';
+  const logoUrl      = clubConfig?.logoUrl      || '/logo.png';
+  const lema         = clubConfig?.lema         || '';
+  const epoca        = clubConfig?.epoca        || '25/26';
 
-    if (!user?.clubeId) return;
-    carregarConfigClube(user.clubeId);
-  }, [user?.clubeId]);
-
-  const carregarConfigClube = async (clubeId) => {
-    try {
-      const snap = await getDoc(doc(db, "clubs", clubeId, "config", "geral")); // ← config/geral
-      if (snap.exists()) setConfigClube({ id: snap.id, ...snap.data() });
-    } catch (err) {
-      console.error("Erro ao carregar config do clube:", err);
-    }
-  };
-
-
-
-  const corPrimaria = configClube?.corPrimaria || "#0b1635";
-  const corDestaque = configClube?.corDestaque || "#f5c623";
-  const nomeClube = configClube?.nome || "ClubSide";
-  const logoUrl = configClube?.logoUrl || "/logo.png";
-  const lema = configClube?.lema || "";
-  const epoca = configClube?.epoca || "25/26";
-
+  const userRole = user?.role || 'viewer';
+  const visibleNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate("/login");
+      navigate('/login');
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error('Erro ao fazer logout:', error);
     }
   };
 
-  const visibleNavItems = navItems.filter(item => item.roles.includes(userRole));
-
   return (
     <div className="flex min-h-screen bg-[#f3f4f6]">
+
       {/* Mobile Menu Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -87,7 +66,7 @@ export default function DashboardLayout({ children, user }) {
         <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* SIDEBAR */}
+      {/* ── SIDEBAR ── */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-40
@@ -100,19 +79,18 @@ export default function DashboardLayout({ children, user }) {
         `}
         style={{ backgroundColor: corPrimaria }}
       >
-        {/* Logo + lema */}
+        {/* Logo */}
         <div className="flex items-center gap-3 mt-6 mb-8 px-4">
-          <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0"
+          <div
+            className="h-10 w-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0"
             style={{ borderColor: corDestaque, borderWidth: 1 }}
           >
             <img src={logoUrl} alt={nomeClube} className="h-8 w-8 object-contain" />
           </div>
-
           <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
+            <p className="text-sm font-bold whitespace-nowrap">{nomeClube}</p>
             {lema && (
-              <p className="text-[10px] tracking-[0.25em] uppercase whitespace-nowrap"
-                style={{ color: corDestaque }}
-              >
+              <p className="text-[10px] tracking-[0.2em] uppercase whitespace-nowrap" style={{ color: corDestaque }}>
                 {lema}
               </p>
             )}
@@ -123,21 +101,28 @@ export default function DashboardLayout({ children, user }) {
         <nav className="flex-1 space-y-1 px-2">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
+            const isActive = window.location.pathname === item.path;
             return (
               <button
                 key={item.id}
                 onClick={() => { navigate(item.path); setSidebarOpen(false); }}
-                className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-slate-100 transition-colors"
-                style={{
-                  // hover via onMouseEnter/Leave ou classe Tailwind customizada
-                }}
+                className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={
+                  isActive
+                    ? { backgroundColor: corDestaque, color: corPrimaria }
+                    : { color: 'rgba(255,255,255,0.85)' }
+                }
                 onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = corDestaque;
-                  e.currentTarget.style.color = corPrimaria;
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = corDestaque + '33';
+                    e.currentTarget.style.color = '#ffffff';
+                  }
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '';
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+                  }
                 }}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
@@ -151,17 +136,17 @@ export default function DashboardLayout({ children, user }) {
 
         {/* User info */}
         <div className="px-4 py-3 border-t border-white/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-          <p className="text-xs text-slate-300 truncate">{user?.email}</p>
-          <p className="text-[10px] uppercase" style={{ color: corDestaque }}>{userRole}</p>
+          <p className="text-xs text-white/60 truncate">{user?.email}</p>
+          <p className="text-[10px] uppercase font-semibold" style={{ color: corDestaque }}>{userRole}</p>
         </div>
 
         {/* Rodapé */}
-        <div className="mb-4 text-[10px] text-slate-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity px-4">
+        <div className="mb-4 text-[10px] text-white/40 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity px-4">
           © {new Date().getFullYear()} {nomeClube}
         </div>
       </aside>
 
-      {/* CONTEÚDO + HEADER */}
+      {/* ── CONTEÚDO + HEADER ── */}
       <div className="flex-1 flex flex-col w-full lg:w-auto">
         <header
           className="h-16 text-white flex items-center justify-between px-4 md:px-8 shadow-md"
@@ -170,8 +155,8 @@ export default function DashboardLayout({ children, user }) {
           <div className="ml-12 lg:ml-0">
             <h1 className="text-sm md:text-lg font-semibold tracking-wide">{nomeClube}</h1>
             {(lema || epoca) && (
-              <p className="text-[10px] md:text-xs text-slate-300">
-                {lema}{lema && epoca ? " · " : ""}{epoca ? `Época ${epoca}` : ""}
+              <p className="text-[10px] md:text-xs text-white/60">
+                {lema}{lema && epoca ? ' · ' : ''}{epoca ? `Época ${epoca}` : ''}
               </p>
             )}
           </div>
@@ -181,7 +166,6 @@ export default function DashboardLayout({ children, user }) {
               <Shield className="w-3 h-3" />
               <span className="capitalize">{userRole}</span>
             </div>
-
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs hover:bg-red-500 hover:border-red-400 transition-colors"
