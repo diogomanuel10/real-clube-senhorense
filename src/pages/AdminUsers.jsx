@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from "../utils/firebase";
 import DashboardLayout from "../components/DashboardLayout";
-import { Users, Shield, Edit3, ChevronLeft, UserPlus, Copy, Check, Link } from "lucide-react";
+import { Users, Shield, Edit3, ChevronLeft, UserPlus, Copy, Check, Link, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClub } from '../contexts/ClubContext';
-import { auth } from '../utils/firebase';
-
 
 const ROLES = ["admin", "coordenador", "treinador", "fisio", "direcao", "atleta", "preparador"];
 
@@ -20,13 +18,19 @@ export default function AdminUsers({ user }) {
   const [formEquipas, setFormEquipas] = useState([]);
   const [saving, setSaving] = useState(false);
   const [escaloes, setEscaloes] = useState([]);
+  const [eliminando, setEliminando] = useState(false);
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
 
-  // ── Convite ──
+  // Convite
   const [modalConvite, setModalConvite] = useState(false);
   const [conviteRole, setConviteRole] = useState("treinador");
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const [linkGerado, setLinkGerado] = useState(null);
   const [copiado, setCopiado] = useState(false);
+
+  useEffect(() => {
+    if (user && user.role !== "admin") navigate("/");
+  }, [user]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -41,12 +45,6 @@ export default function AdminUsers({ user }) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-  if (user && user.role !== "admin") {
-    navigate("/");
-  }
-}, [user]);
 
   useEffect(() => {
     loadUsers();
@@ -66,6 +64,7 @@ export default function AdminUsers({ user }) {
     setEditingUser(u);
     setFormRole(u.role || "");
     setFormEquipas(u.equipas || []);
+    setConfirmarEliminar(false); // reset confirmação
   };
 
   const handleSave = async () => {
@@ -86,20 +85,31 @@ export default function AdminUsers({ user }) {
     }
   };
 
-  // ── Gerar convite ──
+  const eliminarUser = async () => {
+    if (!editingUser) return;
+    setEliminando(true);
+    try {
+      const clubeId = user.clubeId || clubId;
+      await deleteDoc(doc(db, `clubs/${clubeId}/utilizadores`, editingUser.id));
+      await deleteDoc(doc(db, "utilizadores", editingUser.id));
+      await loadUsers();
+      setEditingUser(null);
+      setConfirmarEliminar(false);
+    } catch (err) {
+      console.error("Erro ao eliminar:", err);
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   const gerarConvite = async () => {
     if (!conviteRole) return;
     setGerandoConvite(true);
     try {
       const clubeId = user.clubeId || clubId;
-
-      // Token aleatório
       const token = crypto.randomUUID().replace(/-/g, '').substring(0, 24);
-
-      // Expira em 7 dias
       const expiraEm = new Date();
       expiraEm.setDate(expiraEm.getDate() + 7);
-
       await setDoc(doc(db, `clubs/${clubeId}/convites`, token), {
         role: conviteRole,
         clubeId,
@@ -108,9 +118,7 @@ export default function AdminUsers({ user }) {
         criadoEm: new Date().toISOString(),
         expiraEm: expiraEm.toISOString(),
       });
-
-      const link = `${window.location.origin}/convite?token=${token}&clube=${clubeId}`;
-      setLinkGerado(link);
+      setLinkGerado(`${window.location.origin}/convite?token=${token}&clube=${clubeId}`);
     } catch (err) {
       console.error("Erro ao gerar convite:", err);
     } finally {
@@ -119,7 +127,6 @@ export default function AdminUsers({ user }) {
   };
 
   const copiarLink = async () => {
-    if (!linkGerado) return;
     await navigator.clipboard.writeText(linkGerado);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2500);
@@ -155,15 +162,13 @@ export default function AdminUsers({ user }) {
                 </div>
               </div>
             </div>
-
-            {/* ── BOTÃO GERAR CONVITE ── */}
             <button
               onClick={() => setModalConvite(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-md hover:brightness-110 transition-all"
               style={{ backgroundColor: '#0b1635' }}
             >
               <UserPlus className="w-4 h-4" />
-              <span>Gerar Convite</span>
+              Gerar Convite
             </button>
           </div>
         </header>
@@ -191,6 +196,7 @@ export default function AdminUsers({ user }) {
               <div className="divide-y divide-slate-100">
                 {utilizadores.map((u) => (
                   <div key={u.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-slate-50 transition">
+
                     {/* Mobile */}
                     <div className="flex flex-col gap-3 sm:hidden">
                       <div className="flex items-center gap-3">
@@ -247,12 +253,10 @@ export default function AdminUsers({ user }) {
           </div>
         </main>
 
-        {/* ── MODAL CONVITE ── */}
+        {/* MODAL CONVITE */}
         {modalConvite && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={fecharModalConvite}>
             <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-
-              {/* Header */}
               <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between" style={{ backgroundColor: '#0b1635' }}>
                 <div className="flex items-center gap-3 text-white">
                   <Link className="w-5 h-5 text-[#f5c623]" />
@@ -264,78 +268,49 @@ export default function AdminUsers({ user }) {
                 <button onClick={fecharModalConvite} className="text-slate-300 hover:text-white p-1.5 rounded-full hover:bg-white/10">✕</button>
               </div>
 
-              {/* Conteúdo */}
               <div className="p-6 space-y-5">
                 {!linkGerado ? (
                   <>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        Qual o perfil do utilizador convidado?
-                      </label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Qual o perfil do utilizador convidado?</label>
                       <div className="grid grid-cols-2 gap-2">
                         {ROLES.map((r) => (
-                          <button
-                            key={r}
-                            onClick={() => setConviteRole(r)}
-                            className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all capitalize ${
-                              conviteRole === r
-                                ? 'border-[#0b1635] bg-[#0b1635] text-white'
-                                : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
+                          <button key={r} onClick={() => setConviteRole(r)}
+                            className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all capitalize ${conviteRole === r ? 'border-[#0b1635] bg-[#0b1635] text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
                             {r}
                           </button>
                         ))}
                       </div>
                     </div>
-
-                    <button
-                      onClick={gerarConvite}
-                      disabled={gerandoConvite || !conviteRole}
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                      style={{ backgroundColor: '#f5c623', color: '#0b1635' }}
-                    >
-                      {gerandoConvite ? (
-                        <><div className="w-4 h-4 border-2 border-[#0b1635] border-t-transparent rounded-full animate-spin" /> A gerar...</>
-                      ) : (
-                        <><UserPlus className="w-4 h-4" /> Gerar Link de Convite</>
-                      )}
+                    <button onClick={gerarConvite} disabled={gerandoConvite || !conviteRole}
+                      className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      style={{ backgroundColor: '#f5c623', color: '#0b1635' }}>
+                      {gerandoConvite
+                        ? <><div className="w-4 h-4 border-2 border-[#0b1635] border-t-transparent rounded-full animate-spin" />A gerar...</>
+                        : <><UserPlus className="w-4 h-4" />Gerar Link de Convite</>
+                      }
                     </button>
                   </>
                 ) : (
                   <>
-                    {/* Link gerado */}
                     <div className="text-center">
                       <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                         <Check className="w-7 h-7 text-green-600" />
                       </div>
                       <p className="font-bold text-slate-800 text-base">Convite gerado!</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Role: <span className="font-semibold text-slate-700 capitalize">{conviteRole}</span> · expira em 7 dias
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Role: <span className="font-semibold capitalize">{conviteRole}</span> · expira em 7 dias</p>
                     </div>
-
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                       <p className="text-xs text-slate-500 mb-1 font-medium">Link de convite:</p>
                       <p className="text-xs text-slate-700 break-all font-mono leading-relaxed">{linkGerado}</p>
                     </div>
-
-                    <button
-                      onClick={copiarLink}
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-                      style={{ backgroundColor: copiado ? '#16a34a' : '#f5c623', color: copiado ? 'white' : '#0b1635' }}
-                    >
-                      {copiado ? (
-                        <><Check className="w-4 h-4" /> Copiado!</>
-                      ) : (
-                        <><Copy className="w-4 h-4" /> Copiar Link</>
-                      )}
+                    <button onClick={copiarLink}
+                      className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                      style={{ backgroundColor: copiado ? '#16a34a' : '#f5c623', color: copiado ? 'white' : '#0b1635' }}>
+                      {copiado ? <><Check className="w-4 h-4" />Copiado!</> : <><Copy className="w-4 h-4" />Copiar Link</>}
                     </button>
-
-                    <button
-                      onClick={() => { setLinkGerado(null); setConviteRole("treinador"); }}
-                      className="w-full py-2 rounded-xl text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all"
-                    >
+                    <button onClick={() => { setLinkGerado(null); setConviteRole("treinador"); }}
+                      className="w-full py-2 rounded-xl text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50">
                       Gerar outro convite
                     </button>
                   </>
@@ -349,6 +324,8 @@ export default function AdminUsers({ user }) {
         {editingUser && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setEditingUser(null)}>
             <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+
+              {/* Header */}
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between flex-shrink-0">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">Editar Utilizador</p>
@@ -357,15 +334,20 @@ export default function AdminUsers({ user }) {
                 <button onClick={() => setEditingUser(null)} className="text-slate-300 hover:text-white hover:bg-slate-700 rounded-full p-1.5 ml-2 flex-shrink-0">✕</button>
               </div>
 
+              {/* Corpo scrollável */}
               <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+
+                {/* 1. Role */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Perfil / Role</label>
-                  <select value={formRole} onChange={(e) => setFormRole(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent">
+                  <select value={formRole} onChange={(e) => setFormRole(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#f5c623] focus:border-transparent">
                     <option value="">Selecione um perfil</option>
                     {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
 
+                {/* 2. Equipas */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Equipas que pode gerir</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3">
@@ -377,9 +359,7 @@ export default function AdminUsers({ user }) {
                         const selecionado = formEquipas.includes(nomeEquipa);
                         return (
                           <label key={esc.id} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-50 p-1.5 rounded transition">
-                            <input
-                              type="checkbox"
-                              checked={selecionado}
+                            <input type="checkbox" checked={selecionado}
                               onChange={(e) => {
                                 if (e.target.checked) setFormEquipas((prev) => Array.from(new Set([...prev, nomeEquipa])));
                                 else setFormEquipas((prev) => prev.filter((eq) => eq !== nomeEquipa));
@@ -393,17 +373,69 @@ export default function AdminUsers({ user }) {
                     )}
                   </div>
                 </div>
+
+                {/* 3. Eliminar */}
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-800">Eliminar utilizador</p>
+                      <p className="text-xs text-red-600 mt-0.5">
+                        Remove o acesso à plataforma. A conta de email é mantida no sistema.
+                      </p>
+                    </div>
+                  </div>
+
+                  {!confirmarEliminar ? (
+                    <button
+                      onClick={() => setConfirmarEliminar(true)}
+                      className="mt-3 w-full py-2 rounded-lg text-xs font-semibold border border-red-300 text-red-700 hover:bg-red-100 transition-all"
+                    >
+                      Eliminar utilizador
+                    </button>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-semibold text-slate-700 text-center">
+                        Tens a certeza? Esta ação não pode ser revertida.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setConfirmarEliminar(false)}
+                          className="flex-1 py-2 rounded-lg text-xs font-medium border border-slate-300 text-slate-600 hover:bg-slate-100"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={eliminarUser}
+                          disabled={eliminando}
+                          className="flex-1 py-2 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-all"
+                        >
+                          {eliminando ? 'A eliminar...' : 'Sim, eliminar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
+              {/* Footer */}
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 flex-shrink-0">
-                <button onClick={() => setEditingUser(null)} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100">Cancelar</button>
-                <button disabled={saving} onClick={handleSave} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#f5c623] hover:bg-[#e0b91f] text-[#0b1635] text-sm font-semibold disabled:opacity-60">
+                <button onClick={() => setEditingUser(null)} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm font-medium text-slate-800 hover:bg-slate-100">
+                  Cancelar
+                </button>
+                <button disabled={saving} onClick={handleSave}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: '#f5c623', color: '#0b1635' }}>
                   {saving ? "A guardar..." : "Guardar alterações"}
                 </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

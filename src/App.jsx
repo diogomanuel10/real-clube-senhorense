@@ -19,6 +19,7 @@ import Jogos from './pages/Jogos';
 import DashboardLayout from "./components/DashboardLayout";
 import Atletas from "./pages/Atletas";
 import Captacoes from "./pages/Captacoes";
+import Convite from "./pages/Convite";
 import Login from "./pages/Login";
 import Treinos from "./pages/Treinos";
 import Escaloes from "./pages/Escaloes";
@@ -45,6 +46,7 @@ function AppContent({ user }) {
           <Route path="/superadmin" element={<DashboardLayout user={user}><SuperAdmin /></DashboardLayout>} />
           <Route path="/atletas/:id" element={<AtletaPerfil user={user} />} />
           <Route path="/admin/utilizadores" element={<AdminUsers user={user} />} />
+          <Route path="/convite" element={<Convite />} />
           <Route path="/escaloes" element={<DashboardLayout user={user}><Escaloes user={user} /></DashboardLayout>} />
           <Route path="/jogos" element={<DashboardLayout user={user}><Jogos user={user} /></DashboardLayout>} />
           <Route path="/treinos" element={<DashboardLayout user={user}><Treinos user={user} /></DashboardLayout>} />
